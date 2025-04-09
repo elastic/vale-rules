@@ -1,0 +1,9 @@
+extends: existence
+message: Use American-style formatting for commas and decimal points in numbers.
+link: https://docs.elastic.dev/tech-writing-guidelines/formatting
+ignorecase: true
+level: warning
+nonword: true
+tokens:
+  - '[^\.]\d{1,}\.\d{3,}[^\.]'
+  - '(\d{3}[-\.]?\d{3}[-\.]?\d{4})[^\w]'

@@ -1,0 +1,26 @@
+extends: existence
+message: "Don't use '%s'."
+link: https://docs.elastic.dev/tech-writing-guidelines/voice-tone
+ignorecase: true
+level: warning
+tokens:
+  - a\.k\.a\.
+  - aka
+  - and/or
+  - at this point
+  - it is recommended that
+  - just
+  - left
+  - note that
+  - please
+  - premium app
+  - premium apps
+  - premium solution
+  - premium solutions
+  - quite
+  - realtime
+  - recommend
+  - recommended
+  - thus
+  - very
+  - \.\.\.

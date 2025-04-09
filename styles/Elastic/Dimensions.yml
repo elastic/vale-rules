@@ -1,0 +1,7 @@
+extends: existence
+message: "Avoid using dimensions in the format 'M X N'. Use 'MxN' instead."
+level: error
+nonword: true
+scope: text
+tokens: 
+  - '\b\d+\s*[xX]\s*\d+\b'

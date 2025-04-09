@@ -1,0 +1,16 @@
+extends: substitution
+message: "Use device-agnostic language when possible. Use '%s' instead of '%s'."
+link: 'https://docs.elastic.dev/tech-writing-guidelines/accessibility'
+level: error
+ignorecase: true
+action:
+  name: replace
+swap:
+  'click': select
+  'choose': select
+  'hit': select
+  'long press': select and hold
+  'pinch': zoom out
+  'press': select
+  'spread': zoom in
+  'tap': select
