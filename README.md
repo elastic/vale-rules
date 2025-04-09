@@ -4,10 +4,11 @@ This repo contains a set of linting rules for Vale based on the Elastic style gu
 
 # Get started
 
-1. Clone the repository.
-2. Install Vale with `brew install vale` on macOS. See [Installation](https://vale.sh/docs/vale-cli/installation/).
-3. Install the [Vale add-on for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode).
-4. Run `vale .` from the root folder of any docs repo.
+1. Clone the repository in your home directory.
+2. Add this line to your `.zshrc` file: `export VALE_CONFIG_PATH=~/elastic-style-guide/.vale.ini`.
+3. Install Vale with `brew install vale` on macOS. See [Installation](https://vale.sh/docs/vale-cli/installation/).
+4. Install the [Vale add-on for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode).
+5. Restart Visual Studio Code.
 
 # Folder structure
 
