@@ -13,8 +13,10 @@ jobs:
         with:
           fetch-depth: 0
       - name: Download latest style
+        env:
+          TOKEN: ${{ secrets.repo_token }}
         run: |
-          wget https://github.com/elastic/elastic-style-guide/archive/main.zip -O latest.zip
+          wget "token ${TOKEN}" https://github.com/elastic/elastic-style-guide/archive/main.zip -O latest.zip
           unzip latest.zip -d .
       - name: Get all changed docs
         id: changed-files
