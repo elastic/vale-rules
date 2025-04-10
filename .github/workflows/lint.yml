@@ -16,7 +16,7 @@ jobs:
         env:
           TOKEN: ${{ secrets.repo_token }}
         run: |
-          wget "token ${TOKEN}" https://github.com/elastic/elastic-style-guide/archive/main.zip -O latest.zip
+          wget -d --header="Authorization: token ${TOKEN}" https://github.com/elastic/elastic-style-guide/archive/main.zip -O latest.zip
           unzip latest.zip -d .
       - name: Get all changed docs
         id: changed-files
