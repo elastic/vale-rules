@@ -26,7 +26,7 @@ git commit -m "Added the Vale submodule to the project."
 git push
 ```
 
-Copy the sample `.vale.ini` file to the root of your repository, and change the path to point to the submodule:
+Whitelist the sample `.vale.ini` file to the root of your repository, and change the path to point to the submodule:
 
 ```ini
 StylesPath = vale/styles
