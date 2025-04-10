@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Download lastest Splunk style
+      - name: Download latest style
         run: |
           wget https://github.com/elastic/elastic-style-guide/archive/main.zip -O latest.zip
           unzip latest.zip -d .
