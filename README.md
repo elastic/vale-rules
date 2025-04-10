@@ -17,7 +17,7 @@ This repo contains a set of linting rules for Vale based on the Elastic style gu
 
 # Use as a git submodule
 
-To use the contents of this repository as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules), run the following git commands from the target repo:
+Whitelist the contents of this repository as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules), run the following git commands from the target repo:
 
 ```bash
 git submodule add git@github.com:elastic/vale-style-guide.git
