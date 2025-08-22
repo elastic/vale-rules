@@ -4,4 +4,4 @@ level: error
 nonword: true
 scope: text
 tokens: 
-  - '\b\d+\s*[xX]\s*\d+\b'
+  - '\b\d+\s+[xX]\s+\d+\b'

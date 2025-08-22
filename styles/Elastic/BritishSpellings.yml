@@ -1,0 +1,19 @@
+extends: substitution
+message: "Use American English spelling '%s' instead of British English '%s'."
+level: error
+ignorecase: true
+action:
+  name: replace
+swap:
+  '\b(?:organise)\b': organize
+  '\b(?:authorise)\b': authorize
+  '\b(?:analyse)\b': analyze
+  '\b(?:flavour)\b': flavor
+  '\b(?:colour)\b': color
+  '\b(?:behaviour)\b': behavior
+  '\b(?:licence)\b': license
+  '\b(?:defence)\b': defense
+  '\b(?:pretence)\b': pretense
+  '\b(?:dialogue)\b': dialog
+  '\b(?:catalogue)\b': catalog
+  '\b(?:epilogue)\b': epilog

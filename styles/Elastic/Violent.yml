@@ -7,25 +7,23 @@ nonword: true
 action:
   name: replace
 swap:
-  - abort: Stop, cancel, end
-  - abuse: Misuse
-  - Boot: Start, run
-  - Execute: Run, complete
-  - Hack: Workaround, tip
-  - Hack: Configure, modify
-  - Hit: Select
-  - Hit: Visit, view
-  - Invalid: Not valid, incorrect
-  - Kill: Cancel, Stop
-  - Terminate: Stop, exit
-  - abnormal: atypical or not typical
-  - disable: deactivate, deselect, hide, inactive, turn off
-  - disabled: deactivated, deselected, hidden, turned off, unavailable
-  - disables: deactivates, deselects, hides, turns off, makes unavailable
-  - dummy data: placeholder data
-  - flesh-colored: dark brown, cream, or beige
-  - skin-toned: dark brown, cream, or beige
-  - first-class: top-level
-  - illegal characters: invalid characters
-  - mankind: all, everyone, humanity, or humankind
-  - sanity check: review  
+  abort: "stop, cancel, end"
+  abuse: "misuse"
+  boot: "start, run"
+  execute: "run, complete"
+  hack: "workaround, tip, configure, modify"
+  hit: "select, visit, view"
+  invalid: "not valid, incorrect"
+  kill: "cancel, stop"
+  terminate: "stop, exit"
+  abnormal: "atypical, not typical"
+  disable: "deactivate, deselect, hide, turn off"
+  disabled: "deactivated, deselected, hidden, turned off, unavailable"
+  disables: "deactivates, deselects, hides, turns off, makes unavailable"
+  "dummy data": "placeholder data"
+  "flesh-colored": "dark brown, cream, beige"
+  "skin-toned": "dark brown, cream, beige"
+  "first-class": "top-level"
+  "illegal characters": "invalid characters"
+  mankind: "all, everyone, humanity, humankind"
+  "sanity check": "review"  
