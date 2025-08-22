@@ -1,17 +1,6 @@
-extends: substitution
-message: 'Consider "%s" instead of "%s".'
-link: 'https://docs.elastic.dev/tech-writing-guidelines/formatting'
-level: warning
-ignorecase: false
-action:
-  name: replace
-swap:
-  1: 'one'
-  2: 'two'
-  3: 'three'
-  4: 'four'
-  5: 'five'
-  6: 'six'
-  7: 'seven'
-  8: 'eight'
-  9: 'nine'
+extends: existence
+message: "Write out numbers 1-9 as words. Use '%s' instead."
+level: error
+nonword: true
+tokens:
+- \b(?:[1-9])\b(?!\s*(?:percent|%|\.|:|,\d|st|nd|rd|th|\s*(?:cm|mm|km|m|kg|g|lb|oz|ft|in|px|MB|GB|TB|KB)))

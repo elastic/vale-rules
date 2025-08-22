@@ -1,0 +1,118 @@
+extends: capitalization
+message: "'%s' should use sentence-style capitalization."
+link: https://docs.elastic.dev/tech-writing-guidelines/content-structure
+level: suggestion
+scope: heading
+match: $sentence
+exceptions:
+  - AI
+  - Advanced Settings
+  - Agent
+  - Analytics
+  - API
+  - APM
+  - AWS
+  - Azure
+  - Beats
+  - CA
+  - Canvas
+  - CCR
+  - CCS
+  - CLI
+  - Cloud UI
+  - Console
+  - CRD
+  - CSS
+  - Dashboard
+  - Discover
+  - Discuss
+  - ECE
+  - ECK
+  - ECS
+  - EKS
+  - Elastic
+  - Elastic Agent
+  - Elastic Cloud
+  - Elastic Cloud Enterprise
+  - Elastic Cloud on Kubernetes
+  - Elastic Common Schema
+  - Elastic Kubernetes Service
+  - Elastic Maps Service
+  - Elastic Package Registry
+  - Elastic Security
+  - Elastic Stack
+  - Elasticsearch
+  - Elasticsearch Service
+  - EMS
+  - Enterprise Search
+  - EPR
+  - EQL
+  - Event Query Language
+  - Feature Controls
+  - Fleet
+  - Fleet Server
+  - GCP
+  - GCS
+  - GeoJSON
+  - GKE
+  - Google Cloud Platform
+  - Google Cloud Storage
+  - Google Kubernetes Engine
+  - Graph
+  - Grok Debugger
+  - HTML
+  - HTTP
+  - HTTPS
+  - ID
+  - JSON
+  - K8s
+  - Kibana
+  - Kibana Query Language
+  - KQL
+  - Kubernetes
+  - Labs
+  - Lens
+  - Logstash
+  - Lucene
+  - Machine Learning
+  - Maps
+  - MFA
+  - Microsoft Azure
+  - NLP
+  - NodeSet
+  - Observability
+  - OpenShift
+  - Painless
+  - Painless Lab
+  - PDB
+  - PVC
+  - QoS
+  - Query Profiler
+  - RBAC
+  - Real User Monitoring
+  - REST
+  - RUM
+  - Rules
+  - Search AI
+  - Security
+  - Serverless
+  - Self-managed
+  - Spaces
+  - SQL
+  - Stack Management
+  - Stack Monitoring
+  - Timelion
+  - TLS
+  - TSVB
+  - Universal Profiling
+  - Upgrade Assistant
+  - Uptime
+  - URL
+  - User Experience
+  - Vega
+  - Watcher
+  - Web Map Service
+  - WMS
+  - XML
+  - Zero Trust
+  - ZooKeeper

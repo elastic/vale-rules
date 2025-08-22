@@ -6,18 +6,51 @@ ignorecase: false
 first: '\b([A-Z]{3,5})\b'
 second: '(?:\b[A-Z][a-z]+ )+\(([A-Z]{3,5})\)'
 exceptions:
+  - ABAC
+  - AD
+  - AI
+  - AIOps
+  - APM
   - API
   - ASP
+  - ATP
+  - AV
+  - AWS
+  - BBQ
+  - BYOD
+  - CCR
+  - CCS
   - CLI
   - CPU
+  - CPT
   - CSS
   - CSV
+  - CWPP
   - DEBUG
+  - DFIR
+  - DGA
+  - DLP
+  - DNS
   - DOM
   - DPI
+  - ECE
+  - ECH
+  - ECK
+  - EDR
+  - ELv2
+  - EMP
+  - EPP
+  - EQL
+  - ESaaS
+  - FaaS
   - FAQ
+  - GA
+  - GB
   - GCC
+  - GCP
   - GDB
+  - GDPR
+  - GenAI
   - GET
   - GPU
   - GTK
@@ -26,37 +59,91 @@ exceptions:
   - HTTP
   - HTTPS
   - IDE
+  - IIoT
+  - ILM
+  - InfoSec
+  - IoAs
+  - IoCs
+  - IoT
+  - IR
+  - ISV
+  - IT
   - JAR
   - JSON
   - JSX
+  - K8s
+  - KPI
+  - KQL
+  - LDAP
   - LESS
+  - LLM
   - LLDB
+  - MDR
+  - MFA
+  - ML
+  - MSSP
+  - MTTD
+  - MTTI
+  - MTTR
+  - MVI
   - NET
+  - NL
+  - NLP
   - NOTE
   - NVDA
+  - OEM
+  - OOB
+  - OOTB
   - OSS
+  - OT
+  - OTel
+  - PaaS
   - PATH
   - PDF
   - PHP
   - POST
+  - RAG
   - RAM
+  - RBAC
   - REPL
+  - RRF
   - RSA
+  - RUM
+  - SaaS
   - SCM
+  - SCEP
   - SCSS
   - SDK
+  - SecOps
+  - SIEM
+  - SLA
+  - SLM
+  - SMB
+  - SMP
+  - SOAR
+  - SOC
   - SQL
   - SSH
   - SSL
+  - SSN
+  - SSO
   - SVG
   - TBD
   - TCP
   - TODO
+  - TSVB
+  - TTPs
   - URI
   - URL
   - USB
   - UTF
+  - VDI
+  - VM
+  - VT
+  - WDE
   - XML
   - XSS
   - YAML
   - ZIP
+  - ZTA
+  - ZTNA

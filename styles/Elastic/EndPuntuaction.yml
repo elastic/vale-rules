@@ -1,0 +1,9 @@
+extends: existence
+level: warning
+nonword: true
+message: "Don't end headings with punctuation"
+scope: heading
+action:
+  name: remove
+tokens:
+  - '[.?!]$'

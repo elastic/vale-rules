@@ -1,7 +1,7 @@
 extends: existence
-message: "Don't use exclamation points in text."
+message: "Use exclamation points sparingly. Consider removing the exclamation point."
 nonword: true
-level: error
+level: suggestion
 action:
   name: edit
   params:
