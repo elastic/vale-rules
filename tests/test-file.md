@@ -1,6 +1,6 @@
 # Elastic Vale Style Guide Test File
 
-This file contains test cases for all Vale rules in the Elastic style guide. See the catalogue.
+This file contains test cases for all Vale rules in the Elastic style guide. See the catalogue!
 
 ## Acronyms Rule Tests
 
