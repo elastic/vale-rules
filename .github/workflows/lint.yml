@@ -15,7 +15,7 @@ jobs:
         with:
           fetch-depth: 0  # Fetch full history for proper diff
           
-      - name: Install Homebrew and dependencies
+      - name: Install Homebrew
         run: |
           if ! command -v brew &> /dev/null; then
             echo "Installing Homebrew..."
@@ -24,12 +24,6 @@ jobs:
             echo "/opt/homebrew/bin" >> $GITHUB_PATH
           else
             echo "Homebrew is already installed"
-          fi
-          
-          # Install jq if not available (needed for JSON processing)
-          if ! command -v jq &> /dev/null; then
-            echo "Installing jq..."
-            brew install jq
           fi
           
       - name: Run install script
@@ -66,9 +60,14 @@ jobs:
           if [ -s changed_files.txt ]; then
             echo "Running Vale on changed files..."
             
-            # Run Vale with line-based output format for reviewdog
-            cat changed_files.txt | xargs vale --output=line 2>&1 | \
-            reviewdog -f=vale -name="vale" -reporter=github-pr-review -filter-mode=added
+            # Use a custom error format that matches Vale's line output
+            # Vale line format: file:line:column:severity:message
+            while IFS= read -r file; do
+              if [ -f "$file" ]; then
+                vale --output=line "$file" 2>&1 || true
+              fi
+            done < changed_files.txt | \
+            reviewdog -efm="%f:%l:%c:%t:%m" -name="vale" -reporter=github-pr-review -filter-mode=added
           else
             echo "No files to check"
           fi
@@ -82,6 +81,10 @@ jobs:
           if [ -s changed_files.txt ]; then
             echo "Running Vale for PR comments..."
             
-            cat changed_files.txt | xargs vale --output=line 2>&1 | \
-            reviewdog -f=vale -name="vale-summary" -reporter=github-pr-comment
+            while IFS= read -r file; do
+              if [ -f "$file" ]; then
+                vale --output=line "$file" 2>&1 || true
+              fi
+            done < changed_files.txt | \
+            reviewdog -efm="%f:%l:%c:%t:%m" -name="vale-summary" -reporter=github-pr-comment
           fi
