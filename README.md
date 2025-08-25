@@ -4,11 +4,25 @@ This repo contains a set of linting rules for Vale based on the Elastic style gu
 
 ## Get started
 
+Run the automated installation script:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/elastic/vale-style-guide/main/install-macos.sh | bash
+```
+
+This script:
+
+- Verifies you're on macOS.
+- Checks for Homebrew installation.
+- Installs Vale through Homebrew.
+- Configures Vale with the Elastic style guide.
+- Downloads the latest style guide package.
+
+### Manual installation
+
 1. Copy the repository to your home directory.
 2. Add this line to your `.zshrc` file: `export VALE_CONFIG_PATH=~/elastic-style-guide/.vale.ini`.
 3. Install Vale with `brew install vale` on macOS. See [Installation](https://vale.sh/docs/vale-cli/installation/).
-4. Install the [Vale add-on for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode).
-5. Restart Visual Studio Code.
 
 ## Folder structure
 
@@ -37,6 +51,65 @@ To update the submodule, run the following git command from the root folder of t
 ```
 git submodule update --remote --merge
 ```
+
+## Use as a Vale package
+
+This repository is distributed as a complete Vale package that can be automatically downloaded and managed by Vale.
+
+### Installation from package
+
+Add the following to your project's or system's `.vale.ini` file:
+
+```ini
+Packages = https://github.com/elastic/vale-style-guide/releases/download/latest/elastic-vale.zip
+
+[*.{md,adoc}]
+BasedOnStyles = Elastic
+```
+
+Then run:
+
+```bash
+vale sync
+```
+
+This automatically downloads and manages the package for you.
+
+### Manual installation from package
+
+Alternatively, you can manually download and install the package:
+
+1. Download the latest `elastic-vale.zip` from the [Releases page](https://github.com/elastic/vale-style-guide/releases).
+2. Extract the zip file to your desired location.
+3. Point your Vale configuration to the extracted styles folder.
+
+Example `.vale.ini` configuration for manual installation:
+
+```ini
+StylesPath = path/to/extracted/styles
+
+[*.{md,adoc}]
+BasedOnStyles = Elastic
+```
+
+## Creating releases
+
+To create a new release of the Vale package:
+
+1. Update the version and make your changes.
+2. Commit and push your changes to the main branch.
+3. Create and push a version tag:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The GitHub workflow automatically:
+
+- Packages the `.vale.ini` file and `styles` folder into `elastic-vale.zip`.
+- Creates a new GitHub release with the version tag.
+- Uploads the package as a release asset.
 
 ## Resources
 

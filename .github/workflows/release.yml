@@ -1,0 +1,93 @@
+name: Release Vale Package
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v1.0.0, v2.1.3, etc.
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        
+      - name: Create Vale package
+        run: |
+          # Create a temporary directory for the package
+          mkdir -p vale-package
+          
+          # Copy .vale.ini and styles folder to the package directory
+          cp .vale.ini vale-package/
+          cp -r styles vale-package/
+          
+          # Create the zip file
+          cd vale-package
+          zip -r ../elastic-vale.zip .
+          cd ..
+          
+          # Verify the package contents
+          echo "Package contents:"
+          unzip -l elastic-vale.zip
+          
+      - name: Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            Vale style guide package for Elastic documentation.
+            
+            This package contains:
+            - `.vale.ini` configuration file
+            - `styles/Elastic/` folder with all style rules
+            
+            ## Installation
+            
+            Add the following to your project's or system's `.vale.ini` file:
+            
+            ```ini
+            Packages = https://github.com/elastic/vale-style-guide/releases/download/latest/elastic-vale.zip
+            
+            [*.md]
+            BasedOnStyles = Elastic
+            ```
+            
+            Then run:
+            
+            ```bash
+            vale sync
+            ```
+            
+            ## Alternative: Manual Installation
+            
+            1. Download and extract `elastic-vale.zip`
+            2. Place the contents in your desired location
+            3. Update your Vale configuration to point to this StylesPath:
+            
+            ```ini
+            StylesPath = path/to/extracted/styles
+            
+            [*.md]
+            BasedOnStyles = Elastic
+            ```
+          draft: false
+          prerelease: false
+          
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./elastic-vale.zip
+          asset_name: elastic-vale.zip
+          asset_content_type: application/zip
