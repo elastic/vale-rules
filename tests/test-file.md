@@ -4,7 +4,7 @@ This file contains test cases for all Vale rules in the Elastic style guide. See
 
 ## Acronyms Rule Tests
 
-This paragraph contains XYZ (an undefined acronym) that should trigger the rule. However, API and APM are in the exceptions list.
+This paragraph contains XYZ (an undefined acronym) that should trigger the rule. However, API and APM are in the exceptions list...
 
 ## British Spellings Rule Tests
 
