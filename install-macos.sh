@@ -73,52 +73,94 @@ if [ "$VALE_ALREADY_INSTALLED" = false ]; then
     fi
 fi
 
-# 4. Create or update Vale configuration directory and file
+# 4. Get the script directory to locate local styles
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STYLES_SOURCE_DIR="$SCRIPT_DIR/styles"
+
+print_info "Checking for local styles directory..."
+if [ ! -d "$STYLES_SOURCE_DIR" ]; then
+    print_error "Local styles directory not found at: $STYLES_SOURCE_DIR"
+    print_error "Make sure you're running this script from the elastic-style-guide repository root"
+    exit 1
+fi
+print_success "✓ Local styles found at: $STYLES_SOURCE_DIR"
+
+# 5. Update repository to latest changes
+print_info "Updating repository to latest changes..."
+if git fetch && git pull; then
+    print_success "✓ Repository updated successfully"
+else
+    print_error "Failed to update repository"
+    print_info "Continuing with current local version..."
+fi
+
+# 6. Clean existing Vale installation
+VALE_CONFIG_DIR="$HOME/Library/Application Support/vale"
+print_info "Cleaning existing Vale installation..."
+if [ -d "$VALE_CONFIG_DIR" ]; then
+    print_info "Removing existing Vale directory: $VALE_CONFIG_DIR"
+    if rm -rf "$VALE_CONFIG_DIR"; then
+        print_success "✓ Existing Vale installation cleaned"
+    else
+        print_error "Failed to clean existing Vale installation"
+        exit 1
+    fi
+else
+    print_info "No existing Vale installation found"
+fi
+
+# 7. Create or update Vale configuration directory and file
 VALE_CONFIG_DIR="$HOME/Library/Application Support/vale"
 VALE_CONFIG_FILE="$VALE_CONFIG_DIR/.vale.ini"
 
 print_info "Setting up Vale configuration..."
 mkdir -p "$VALE_CONFIG_DIR"
 
-# Check if config file already exists
-if [ -f "$VALE_CONFIG_FILE" ]; then
-    print_info "Existing configuration found at $VALE_CONFIG_FILE - overwriting..."
-else
-    print_info "Creating new configuration at $VALE_CONFIG_FILE..."
-fi
+# Create the .vale.ini file
+print_info "Creating new configuration at $VALE_CONFIG_FILE..."
 
 # Create or overwrite the .vale.ini file
 cat > "$VALE_CONFIG_FILE" << 'EOF'
-# Elastic Vale Style Guide Configuration
-# This configuration uses the Elastic style guide package
-
-# Download the Elastic style guide package
-Packages = https://github.com/elastic/vale-style-guide/releases/download/latest/elastic-vale.zip
-
-# Set minimum alert level
 MinAlertLevel = suggestion
 
-# Apply Elastic style guide to Markdown files
 [*.md]
 BasedOnStyles = Elastic
 
-# Apply Elastic style guide to AsciiDoc files
 [*.adoc]
 BasedOnStyles = Elastic
 EOF
 
 print_success "✓ Vale configuration updated at: $VALE_CONFIG_FILE"
 
-# 5. Run vale sync to download the style guide
-print_info "Downloading Elastic style guide..."
-if vale sync; then
-    print_success "✓ Elastic style guide downloaded successfully"
+# 8. Copy local styles to Vale's styles directory
+VALE_STYLES_DIR="$VALE_CONFIG_DIR/styles"
+print_info "Setting up Vale styles directory..."
+mkdir -p "$VALE_STYLES_DIR"
+
+print_info "Copying Elastic styles from local repository..."
+if [ -d "$STYLES_SOURCE_DIR/Elastic" ]; then
+    # Copy the Elastic styles (directory is already clean)
+    if cp -r "$STYLES_SOURCE_DIR/Elastic" "$VALE_STYLES_DIR/"; then
+        print_success "✓ Elastic styles copied successfully to: $VALE_STYLES_DIR/Elastic"
+    else
+        print_error "Failed to copy Elastic styles"
+        exit 1
+    fi
 else
-    print_error "Failed to download Elastic style guide"
+    print_error "Elastic styles directory not found at: $STYLES_SOURCE_DIR/Elastic"
     exit 1
 fi
 
-# 6. Final verification
+# 9. Verify that the copied styles are accessible
+print_info "Verifying copied style guide..."
+if [ -d "$VALE_STYLES_DIR/Elastic" ] && ls "$VALE_STYLES_DIR/Elastic"/*.yml > /dev/null 2>&1; then
+    print_success "✓ Elastic styles installed and accessible"
+else
+    print_error "Copied Elastic styles verification failed"
+    exit 1
+fi
+
+# 10. Final verification
 print_info "Performing final verification..."
 if vale --config="$VALE_CONFIG_FILE" --help &> /dev/null; then
     print_success "✓ Vale configuration is valid"
@@ -127,7 +169,7 @@ else
     exit 1
 fi
 
-# 7. Success message
+# 11. Success message
 echo
 print_success "🎉 Installation completed successfully!"
 echo
@@ -136,4 +178,6 @@ echo "  • Run 'vale <file>' to check a specific file"
 echo "  • Run 'vale <directory>' to check all supported files in a directory"
 echo
 echo "Configuration file location: $VALE_CONFIG_FILE"
-echo "To update the style guide in the future, run: vale sync"
+echo "Styles installed to: $VALE_STYLES_DIR/Elastic"
+echo
+echo "To update the styles in the future, simply re-run this script."

@@ -9,8 +9,8 @@ This repo contains a set of linting rules for Vale based on the Elastic style gu
 Clone the repository and run the automated installation script:
 
 ```bash
-git clone https://github.com/elastic/vale-style-guide.git
-cd vale-style-guide
+git clone https://github.com/elastic/elastic-style-guide.git
+cd elastic-style-guide
 ./install-macos.sh
 ```
 
@@ -18,31 +18,34 @@ This script:
 
 - Verifies you're on macOS.
 - Checks for Homebrew installation.
-- Installs Vale through Homebrew.
-- Configures Vale with the Elastic style guide.
-- Downloads the latest style guide package.
+- Installs Vale through Homebrew if not already installed.
+- Updates the repository to the latest version (`git fetch && git pull`).
+- Cleans any existing Vale installation for a fresh setup.
+- Copies the local Elastic styles to Vale's standard directory.
+- Creates a Vale configuration file pointing to the Elastic styles.
+
+The script ensures you always get the latest version of the style guide by updating the repository and performing a clean installation each time it's run.
 
 ## Folder structure
 
-- `.vale.ini` contains the Vale settings. See [Configuration](https://vale.sh/docs/topics/config/).
-- `styles/Elastic` contains the Elastic rules for Vale. See [Styles](https://vale.sh/docs/topics/styles/).
+- `install-macos.sh` - Automated installation script for macOS
+- `styles/Elastic/` - Contains the Elastic linting rules for Vale. See [Styles](https://vale.sh/docs/topics/styles/)
+- `.github/workflows/` - CI/CD workflows for testing and releases
 
-## Manual installation from package
+The installation script creates:
+- `~/.vale.ini` - Vale configuration file pointing to the Elastic styles
+- `~/Library/Application Support/vale/styles/Elastic/` - Copy of the Elastic style rules
 
-Alternatively, you can manually download and install the package:
+## Updating
 
-1. Download the latest `elastic-vale.zip` from the [Releases page](https://github.com/elastic/vale-style-guide/releases).
-2. Extract the zip file to your desired location.
-3. Point your Vale configuration to the extracted styles folder.
+To update to the latest style guide rules, re-run the installation script:
 
-Example `.vale.ini` configuration for manual installation:
-
-```ini
-StylesPath = path/to/extracted/styles
-
-[*.{md,adoc}]
-BasedOnStyles = Elastic
+```bash
+cd elastic-style-guide
+./install-macos.sh
 ```
+
+The script pulls the latest changes and reinstalls everything fresh.
 
 ## Creating releases
 
