@@ -161,3 +161,5 @@ You should abort the process, boot the system, choose an option, clone the repos
 ## Wordiness Rule Tests
 
 In order to utilize the system effectively, you should extract the data from the previous location. Inform the users about the changes. A large majority of users agree with this approach. Almost all participants are in agreement.
+
+This is a new line that will trigger Vale errors.
