@@ -1,10 +1,6 @@
 # Elastic Vale Style Guide Test File
 
-This file contains test cases for all Vale rules in the Elastic style guide.
-
-## Accessibility Rule Tests
-
-People who are a victim of disabilities deserve better language. Avoid able-bodied terms like birth defect, crippled, differently abled, disabled, dumb, handicapped, hearing-impaired, lame, maimed, mentally handicapped, missing a limb, mute, non-verbal, normal person, sight-impaired, slow learner, stricken with, suffers from, and vision-impaired. All right.
+This file contains test cases for all Vale rules in the Elastic style guide. See the catalogue.
 
 ## Acronyms Rule Tests
 
