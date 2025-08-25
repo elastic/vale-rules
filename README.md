@@ -4,10 +4,14 @@ This repo contains a set of linting rules for Vale based on the Elastic style gu
 
 ## Get started
 
-Run the automated installation script:
+### Quick installation for macOS
+
+Clone the repository and run the automated installation script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/elastic/vale-style-guide/main/install-macos.sh | bash
+git clone https://github.com/elastic/vale-style-guide.git
+cd vale-style-guide
+./install-macos.sh
 ```
 
 This script:
