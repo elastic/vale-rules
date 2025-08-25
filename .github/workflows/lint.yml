@@ -86,5 +86,5 @@ jobs:
                 vale --output=line "$file" 2>&1 || true
               fi
             done < changed_files.txt | \
-            reviewdog -efm="%f:%l:%c:%t:%m" -name="vale-summary" -reporter=github-pr-comment
+            reviewdog -efm="%f:%l:%c:%t:%m" -name="vale-summary" -reporter=github-pr-review
           fi
