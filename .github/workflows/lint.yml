@@ -72,14 +72,7 @@ jobs:
             done < changed_files.txt | \
             reviewdog -efm="%f:%l:%c:%m" -name="vale" -reporter=github-pr-review
             
-            # Also show results in CI log for debugging
-            echo ""
-            echo "Vale results summary:"
-            while IFS= read -r file; do
-              if [ -f "$file" ]; then
-                vale "$file" || true
-              fi
-            done < changed_files.txt
+            echo "✅ Vale processing completed"
           else
             echo "No files to check"
           fi
