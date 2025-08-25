@@ -134,8 +134,6 @@ echo
 echo "Vale is now configured with the Elastic style guide. You can:"
 echo "  • Run 'vale <file>' to check a specific file"
 echo "  • Run 'vale <directory>' to check all supported files in a directory"
-echo "  • Set VALE_CONFIG_PATH environment variable to use this config globally:"
-echo "    export VALE_CONFIG_PATH=\"$VALE_CONFIG_FILE\""
 echo
 echo "Configuration file location: $VALE_CONFIG_FILE"
 echo "To update the style guide in the future, run: vale sync"
