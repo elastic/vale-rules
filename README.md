@@ -14,17 +14,11 @@ cd elastic-style-guide
 ./install-macos.sh
 ```
 
-This script:
-
-- Verifies you're on macOS.
-- Checks for Homebrew installation.
-- Installs Vale through Homebrew if not already installed.
-- Updates the repository to the latest version (`git fetch && git pull`).
-- Cleans any existing Vale installation for a fresh setup.
-- Copies the local Elastic styles to Vale's standard directory.
-- Creates a Vale configuration file pointing to the Elastic styles.
-
 The script ensures you always get the latest version of the style guide by updating the repository and performing a clean installation each time it's run.
+
+### Install the VS Code extension
+
+Install the [Vale VSCode](https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode) extension to see Vale checks when saving a document.
 
 ## Folder structure
 
