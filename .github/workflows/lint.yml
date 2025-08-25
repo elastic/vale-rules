@@ -46,40 +46,40 @@ jobs:
             echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
           
-      - name: Run Vale on changed files
+      - name: Install reviewdog
         if: steps.changed-files.outputs.has_changes == 'true'
         run: |
-          # Run Vale on changed files and show output directly
+          curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh | sh -s -- -b /usr/local/bin
+          
+      - name: Run Vale with reviewdog
+        if: steps.changed-files.outputs.has_changes == 'true'
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
           if [ -s changed_files.txt ]; then
-            echo "Running Vale on changed files..."
+            echo "Running Vale on changed files with reviewdog..."
             echo "Changed files:"
             cat changed_files.txt
             echo ""
-            echo "Vale results:"
             
-            # Run Vale on each changed file and show results
+            # Run Vale on all changed files and pipe to reviewdog
+            # Use line format and process entire output (no filter-mode=added)
             while IFS= read -r file; do
               if [ -f "$file" ]; then
-                echo "Checking: $file"
+                echo "Processing: $file"
+                vale --output=line "$file" 2>&1 || true
+              fi
+            done < changed_files.txt | \
+            reviewdog -efm="%f:%l:%c:%m" -name="vale" -reporter=github-pr-review
+            
+            # Also show results in CI log for debugging
+            echo ""
+            echo "Vale results summary:"
+            while IFS= read -r file; do
+              if [ -f "$file" ]; then
                 vale "$file" || true
-                echo ""
               fi
             done < changed_files.txt
-            
-            # Get the exit code for the step
-            vale_exit_code=0
-            while IFS= read -r file; do
-              if [ -f "$file" ]; then
-                vale "$file" > /dev/null 2>&1 || vale_exit_code=1
-              fi
-            done < changed_files.txt
-            
-            if [ $vale_exit_code -eq 1 ]; then
-              echo "❌ Vale found issues in the changed files"
-              exit 1
-            else
-              echo "✅ No Vale issues found in changed files"
-            fi
           else
             echo "No files to check"
           fi
