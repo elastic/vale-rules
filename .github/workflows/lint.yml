@@ -2,7 +2,43 @@ name: Vale Lint with reviewdog
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+       - name: Run Vale on changed files
+        if: steputputs.has_changes == 'true'
+        run: |
+          # Run Vale on changed files and show output directly
+          if [ -s changed_files.txt ]; then
+            echo "Running Vale on changed files..."
+            echo "Changed files:"
+            cat changed_files.txt
+            echo ""
+            echo "Vale results:"
+            
+            # Run Vale on each changed file and show results
+            while IFS= read -r file; do
+              if [ -f "$file" ]; then
+                echo "Checking: $file"
+                vale "$file" || true
+                echo ""
+              fi
+            done < changed_files.txt
+            
+            # Get the exit code for the step
+            vale_exit_code=0
+            while IFS= read -r file; do
+              if [ -f "$file" ]; then
+                vale "$file" > /dev/null 2>&1 || vale_exit_code=1
+              fi
+            done < changed_files.txt
+            
+            if [ $vale_exit_code -eq 1 ]; then
+              echo "❌ Vale found issues in the changed files"
+              exit 1
+            else
+              echo "✅ No Vale issues found in changed files"
+            fi
+          else
+            echo "No files to check"
+          fiynchronize, reopened]
 
 jobs:
   vale-lint:
@@ -30,11 +66,6 @@ jobs:
         run: |
           chmod +x ./install-macos.sh
           ./install-macos.sh
-          
-      - name: Install reviewdog
-        uses: reviewdog/action-setup@v1
-        with:
-          reviewdog_version: latest
           
       - name: Get changed files
         id: changed-files
