@@ -79,7 +79,7 @@ jobs:
             if [ -s vale_output.txt ]; then
               echo "Sending to reviewdog..."
               cat vale_output.txt | \
-              reviewdog -efm="%f:%l:%c:%t:%m" -name="vale" -reporter=github-pr-review -filter-mode=added -log-level=debug
+              reviewdog -efm="%f:%l:%c:%m" -name="vale" -reporter=github-pr-review -filter-mode=added -log-level=debug
             else
               echo "No Vale issues found"
             fi
@@ -96,7 +96,7 @@ jobs:
           if [ -f vale_output.txt ] && [ -s vale_output.txt ]; then
             echo "Creating GitHub check run..."
             cat vale_output.txt | \
-            reviewdog -efm="%f:%l:%c:%t:%m" -name="vale-summary" -reporter=github-pr-check -log-level=debug
+            reviewdog -efm="%f:%l:%c:%m" -name="vale-summary" -reporter=github-pr-check -log-level=debug
           else
             echo "No issues to report in check run"
           fi
