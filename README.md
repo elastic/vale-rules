@@ -18,64 +18,12 @@ This script:
 - Configures Vale with the Elastic style guide.
 - Downloads the latest style guide package.
 
-### Manual installation
-
-1. Copy the repository to your home directory.
-2. Add this line to your `.zshrc` file: `export VALE_CONFIG_PATH=~/elastic-style-guide/.vale.ini`.
-3. Install Vale with `brew install vale` on macOS. See [Installation](https://vale.sh/docs/vale-cli/installation/).
-
 ## Folder structure
 
 - `.vale.ini` contains the Vale settings. See [Configuration](https://vale.sh/docs/topics/config/).
 - `styles/Elastic` contains the Elastic rules for Vale. See [Styles](https://vale.sh/docs/topics/styles/).
 
-## Use as a git submodule
-
-To use the contents of this repository as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules), run the following git commands from the target repo:
-
-```bash
-git submodule add git@github.com:elastic/vale-style-guide.git
-git submodule update --init --recursive
-git commit -m "Added the Vale submodule to the project."
-git push
-```
-
-Copy the sample `.vale.ini` file to the root of your repository, and change the path to point to the submodule:
-
-```ini
-StylesPath = vale/styles
-```
-
-To update the submodule, run the following git command from the root folder of the repository:
-
-```
-git submodule update --remote --merge
-```
-
-## Use as a Vale package
-
-This repository is distributed as a complete Vale package that can be automatically downloaded and managed by Vale.
-
-### Installation from package
-
-Add the following to your project's or system's `.vale.ini` file:
-
-```ini
-Packages = https://github.com/elastic/vale-style-guide/releases/download/latest/elastic-vale.zip
-
-[*.{md,adoc}]
-BasedOnStyles = Elastic
-```
-
-Then run:
-
-```bash
-vale sync
-```
-
-This automatically downloads and manages the package for you.
-
-### Manual installation from package
+## Manual installation from package
 
 Alternatively, you can manually download and install the package:
 
