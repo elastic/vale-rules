@@ -35,6 +35,9 @@ jobs:
         uses: reviewdog/action-setup@v1
         with:
           reviewdog_version: latest
+        env:
+          # Prevent reviewdog from running help command during setup
+          REVIEWDOG_SKIP_INSTALL_CHECK: true
           
       - name: Get changed files
         id: changed-files
@@ -60,31 +63,40 @@ jobs:
           if [ -s changed_files.txt ]; then
             echo "Running Vale on changed files..."
             
-            # Use a custom error format that matches Vale's line output
-            # Vale line format: file:line:column:severity:message
+            # First, let's see what Vale outputs
+            echo "=== Vale output preview ==="
             while IFS= read -r file; do
               if [ -f "$file" ]; then
+                echo "Checking file: $file"
                 vale --output=line "$file" 2>&1 || true
               fi
-            done < changed_files.txt | \
-            reviewdog -efm="%f:%l:%c:%t:%m" -name="vale" -reporter=github-pr-review -filter-mode=added
+            done < changed_files.txt > vale_output.txt
+            
+            echo "Vale found the following issues:"
+            cat vale_output.txt
+            
+            # Now pipe to reviewdog with debugging
+            if [ -s vale_output.txt ]; then
+              echo "Sending to reviewdog..."
+              cat vale_output.txt | \
+              reviewdog -efm="%f:%l:%c:%t:%m" -name="vale" -reporter=github-pr-review -filter-mode=added -v
+            else
+              echo "No Vale issues found"
+            fi
           else
             echo "No files to check"
           fi
           
-      - name: Run Vale summary for PR comment
+      - name: Create GitHub Check Run
         if: steps.changed-files.outputs.has_changes == 'true'
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Also run in comment mode for a summary
-          if [ -s changed_files.txt ]; then
-            echo "Running Vale for PR comments..."
-            
-            while IFS= read -r file; do
-              if [ -f "$file" ]; then
-                vale --output=line "$file" 2>&1 || true
-              fi
-            done < changed_files.txt | \
-            reviewdog -efm="%f:%l:%c:%t:%m" -name="vale-summary" -reporter=github-pr-review
+          # Create a check run summary (different from inline comments)
+          if [ -f vale_output.txt ] && [ -s vale_output.txt ]; then
+            echo "Creating GitHub check run..."
+            cat vale_output.txt | \
+            reviewdog -efm="%f:%l:%c:%t:%m" -name="vale-summary" -reporter=github-pr-check -v
+          else
+            echo "No issues to report in check run"
           fi
