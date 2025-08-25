@@ -32,40 +32,60 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
 fi
 print_success "✓ Running on macOS"
 
-# 2. Check if Homebrew is installed
-print_info "Checking for Homebrew installation..."
-if ! command -v brew &> /dev/null; then
-    print_error "Homebrew is not installed. Please install Homebrew first by running:"
-    echo "  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-    exit 1
-fi
-print_success "✓ Homebrew is installed"
-
-# 3. Install Vale using Homebrew
-print_info "Installing Vale..."
-if brew install vale; then
-    print_success "✓ Vale installed successfully"
-else
-    print_error "Failed to install Vale"
-    exit 1
-fi
-
-# 4. Check if Vale is installed properly
-print_info "Verifying Vale installation..."
+# 2. Check if Vale is already installed
+print_info "Checking for existing Vale installation..."
 if command -v vale &> /dev/null; then
     VALE_VERSION=$(vale --version)
-    print_success "✓ Vale is installed: $VALE_VERSION"
+    print_success "✓ Vale is already installed: $VALE_VERSION"
+    VALE_ALREADY_INSTALLED=true
 else
-    print_error "Vale installation verification failed"
-    exit 1
+    print_info "Vale not found, will install it"
+    VALE_ALREADY_INSTALLED=false
 fi
 
-# 5. Create Vale configuration directory and file
+# 3. If Vale is not installed, check for Homebrew and install Vale
+if [ "$VALE_ALREADY_INSTALLED" = false ]; then
+    print_info "Checking for Homebrew installation..."
+    if ! command -v brew &> /dev/null; then
+        print_error "Homebrew is not installed. Please install Homebrew first by running:"
+        echo "  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+        exit 1
+    fi
+    print_success "✓ Homebrew is installed"
+
+    # Install Vale using Homebrew
+    print_info "Installing Vale..."
+    if brew install vale; then
+        print_success "✓ Vale installed successfully"
+    else
+        print_error "Failed to install Vale"
+        exit 1
+    fi
+
+    # Verify installation
+    print_info "Verifying Vale installation..."
+    if command -v vale &> /dev/null; then
+        VALE_VERSION=$(vale --version)
+        print_success "✓ Vale is installed: $VALE_VERSION"
+    else
+        print_error "Vale installation verification failed"
+        exit 1
+    fi
+fi
+
+# 4. Create or update Vale configuration directory and file
 VALE_CONFIG_DIR="$HOME/Library/Application Support/vale"
 VALE_CONFIG_FILE="$VALE_CONFIG_DIR/.vale.ini"
 
-print_info "Creating Vale configuration..."
+print_info "Setting up Vale configuration..."
 mkdir -p "$VALE_CONFIG_DIR"
+
+# Check if config file already exists
+if [ -f "$VALE_CONFIG_FILE" ]; then
+    print_info "Existing configuration found at $VALE_CONFIG_FILE - overwriting..."
+else
+    print_info "Creating new configuration at $VALE_CONFIG_FILE..."
+fi
 
 # Create or overwrite the .vale.ini file
 cat > "$VALE_CONFIG_FILE" << 'EOF'
@@ -87,9 +107,9 @@ BasedOnStyles = Elastic
 BasedOnStyles = Elastic
 EOF
 
-print_success "✓ Created Vale configuration at: $VALE_CONFIG_FILE"
+print_success "✓ Vale configuration updated at: $VALE_CONFIG_FILE"
 
-# 6. Run vale sync to download the style guide
+# 5. Run vale sync to download the style guide
 print_info "Downloading Elastic style guide..."
 if vale sync; then
     print_success "✓ Elastic style guide downloaded successfully"
@@ -98,7 +118,7 @@ else
     exit 1
 fi
 
-# 7. Final verification
+# 6. Final verification
 print_info "Performing final verification..."
 if vale --config="$VALE_CONFIG_FILE" --help &> /dev/null; then
     print_success "✓ Vale configuration is valid"
@@ -107,7 +127,7 @@ else
     exit 1
 fi
 
-# 8. Success message
+# 7. Success message
 echo
 print_success "🎉 Installation completed successfully!"
 echo
