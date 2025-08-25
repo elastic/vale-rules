@@ -2,7 +2,22 @@ name: Vale Lint with reviewdog
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, sy      - name: Run Vale summary for PR check
+        if: steps.changed-files.outputs.has_changes == 'true'
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Also run in check mode for a summary
+          if [ -s changed_files.txt ]; then
+            echo "Running Vale for PR check summary..."
+            
+            while IFS= read -r file; do
+              if [ -f "$file" ]; then
+                vale --output=line "$file" 2>&1 || true
+              fi
+            done < changed_files.txt | \
+            reviewdog -efm="%f:%l:%c:%m" -name="vale-summary" -reporter=github-pr-check
+          fined]
 
 jobs:
   vale-lint:
