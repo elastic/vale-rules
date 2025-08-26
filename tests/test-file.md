@@ -44,7 +44,7 @@ This is a.k.a. easy and/or simple. Just launch the left panel. Note that it is r
 
 ## Ellipses Rule Tests
 
-This sentence has ellipses...
+This sentence has ellipses... Version 9.1 is ready.
 
 ## EmDashes Rule Tests
 

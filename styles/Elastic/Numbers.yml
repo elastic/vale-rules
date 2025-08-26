@@ -1,6 +1,0 @@
-extends: existence
-message: "Write out numbers 1-9 as words. Use '%s' instead."
-level: error
-nonword: true
-tokens:
-- \b(?:[1-9])\b(?!\s*(?:percent|%|\.|:|,\d|st|nd|rd|th|\s*(?:cm|mm|km|m|kg|g|lb|oz|ft|in|px|MB|GB|TB|KB)))
