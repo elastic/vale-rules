@@ -31,8 +31,9 @@ In **Discover**, you can quickly search and filter your log data, get informatio
 Instrument your code and collect performance data and errors at runtime by installing APM agents for Java, Go, .NET, and many more. Then use Observability to monitor your software services and applications in real time:
 - Visualize detailed performance information on your services.
 - Identify and analyze errors.
-- Monitor host-level and APM agent-specific metrics like JVM and Go runtime metrics.
+- Monitor host-level and APM agent-specific metrics like Java Virtual Machine (JVM) and Go runtime metrics.
 
+- JVM blah blah 
 The **Service** inventory provides a quick, high-level overview of the health and general performance of all instrumented services.
 ![Service inventory showing health and performance of instrumented services](https://www.elastic.co/docs/solutions/images/serverless-services-inventory.png)
 

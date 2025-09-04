@@ -36,14 +36,14 @@ To this end, when you create indices for search use cases, (including web crawle
 This pipeline is called `search-default-ingestion`. While it is a "managed" pipeline (meaning it should not be tampered with), you can view its details via the Kibana UI or the Elasticsearch API. You can also [read more about its contents below](#ingest-pipeline-search-details-generic-reference).
 You can control whether you run some of these processors. While all features are enabled by default, they are eligible for opt-out. For [Elastic crawler](https://www.elastic.co/guide/en/enterprise-search/current/crawler.html) and [connectors](https://www.elastic.co/docs/reference/search-connectors). , you can opt out (or back in) per index, and your choices are saved. For API indices, you can opt out (or back in) by including specific fields in your documents. [See below for details](#ingest-pipeline-search-pipeline-settings-using-the-api).
 At the deployment level, you can change the default settings for all new indices. This will not effect existing indices.
-Each index also provides the capability to easily create index-specific ingest pipelines with customizable processing. If you need that extra flexibility, you can create a custom pipeline by going to your pipeline settings and choosing to "copy and customize". This will replace the index’s use of `search-default-ingestion` with 3 newly generated pipelines:
+Each index also provides the capability to easily create index-specific ingest pipelines with customizable processing. If you need that extra flexibility, you can create a custom pipeline by going to your pipeline settings and choosing to "copy and customize". This will replace the index's index's use of `search-default-ingestion` with 3 newly generated pipelines:
 1. `<index-name>`
 2. `<index-name>@custom`
 3. `<index-name>@ml-inference`
 
 Like `search-default-ingestion`, the first of these is "managed", but the other two can and should be modified to fit your needs. You can view these pipelines using the platform tools (Kibana UI, Elasticsearch API), and can also [read more about their content below](#ingest-pipeline-search-details-specific).
 
-## Pipeline Settings
+## Pipeline settings
 
 Aside from the pipeline itself, you have a few configuration options which control individual features of the pipelines.
 - **Extract Binary Content** - This controls whether or not binary documents should be processed and any textual content should be extracted.
