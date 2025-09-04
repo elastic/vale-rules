@@ -48,7 +48,7 @@ This sentence has ellipses... Version 9.1 is ready.
 
 ## EmDashes Rule Tests
 
-This sentence has spaced dashes — like this — which is wrong.
+This sentence has spaced dashes — like this — which is wrong. It's simple really.
 
 ## EndPunctuation Rule Tests
 

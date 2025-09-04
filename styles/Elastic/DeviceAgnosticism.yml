@@ -7,7 +7,6 @@ action:
   name: replace
 swap:
   'click': select
-  'choose': select
   'hit': select
   'long press': select and hold
   'pinch': zoom out
