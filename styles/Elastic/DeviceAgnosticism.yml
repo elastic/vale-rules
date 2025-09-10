@@ -1,7 +1,7 @@
 extends: substitution
 message: "Use device-agnostic language when possible. Use '%s' instead of '%s'."
 link: 'https://docs.elastic.dev/tech-writing-guidelines/accessibility'
-level: error
+level: suggestion
 ignorecase: true
 action:
   name: replace

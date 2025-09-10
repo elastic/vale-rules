@@ -2,7 +2,7 @@ extends: substitution
 message: "Consider using '%s' instead of '%s'."
 link: https://docs.elastic.dev/tech-writing-guidelines/accessibility
 ignorecase: true
-level: error
+level: suggestion
 action:
   name: replace
 swap:

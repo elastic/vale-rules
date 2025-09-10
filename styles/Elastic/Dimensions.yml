@@ -1,6 +1,6 @@
 extends: existence
 message: "Avoid using dimensions in the format 'M X N'. Use 'MxN' instead."
-level: error
+level: suggestion
 nonword: true
 scope: text
 tokens: 

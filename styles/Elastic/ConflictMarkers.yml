@@ -1,7 +1,7 @@
 ---
 extends: existence
 scope: raw
-level: error
+level: suggestion
 nonword: true
 message: "Do not commit Git merge conflict markers in source code."
 action:

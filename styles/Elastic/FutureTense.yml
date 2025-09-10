@@ -2,7 +2,7 @@ extends: existence
 message: "'%s' might be in future tense. Write in the present tense to describe the state of the product as it is now."
 link: 'https://docs.elastic.dev/tech-writing-guidelines/grammar-spelling'
 ignorecase: true
-level: warning
+level: suggestion
 raw:
   - "(going to( |\n|[[:punct:]])[a-zA-Z]*|"
   - "will( |\n|[[:punct:]])[a-zA-Z]*|"

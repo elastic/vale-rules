@@ -1,6 +1,6 @@
 extends: existence
 message: "Don't use apostrophes when making abbreviations plural. Use '%s' instead of '%s'."
-level: error
+level: suggestion
 ignorecase: false
 nonword: true
 tokens:

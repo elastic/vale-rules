@@ -1,6 +1,6 @@
 extends: repetition
 message: '"%s" is repeated.'
-level: warning
+level: suggestion
 ignorecase: false
 alpha: true
 tokens:

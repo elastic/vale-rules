@@ -2,7 +2,7 @@ extends: existence
 message: "Don't use '%s'."
 link: https://docs.elastic.dev/tech-writing-guidelines/voice-tone
 ignorecase: true
-level: warning
+level: suggestion
 tokens:
   - a\.k\.a\.
   - aka

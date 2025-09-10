@@ -1,6 +1,6 @@
 extends: existence
 message: 'Put punctuation outside the quotation marks.'
-level: warning
+level: suggestion
 nonword: true
 tokens:
   - '["“][^"”“]+[.,]["”]'

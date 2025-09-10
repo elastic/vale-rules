@@ -1,5 +1,5 @@
 extends: existence
-level: warning
+level: suggestion
 nonword: true
 message: "Don't end headings with punctuation"
 scope: heading

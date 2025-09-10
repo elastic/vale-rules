@@ -1,7 +1,7 @@
 extends: existence
 message: "Don't use '%s'."
 link: https://docs.elastic.dev/tech-writing-guidelines/accessibility
-level: error
+level: suggestion
 ignorecase: true
 tokens:
   - he/she

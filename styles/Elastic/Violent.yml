@@ -2,7 +2,7 @@ extends: substitution
 message: "Don't use violent, offensive, or ableist terminology like '%s'."
 link: https://docs.elastic.dev/tech-writing-guidelines/accessibility
 ignorecase: true
-level: warning
+level: suggestion
 nonword: false
 action:
   name: replace
