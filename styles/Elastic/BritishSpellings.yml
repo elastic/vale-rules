@@ -5,15 +5,38 @@ ignorecase: true
 action:
   name: replace
 swap:
-  '\b(?:organise)\b': organize
-  '\b(?:authorise)\b': authorize
+  # -ise → -ize
   '\b(?:analyse)\b': analyze
-  '\b(?:flavour)\b': flavor
-  '\b(?:colour)\b': color
+  '\b(?:authorise)\b': authorize
+  '\b(?:customise)\b': customize
+  '\b(?:emphasise)\b': emphasize
+  '\b(?:finalise)\b': finalize
+  '\b(?:initialise)\b': initialize
+  '\b(?:optimise)\b': optimize
+  '\b(?:organise)\b': organize
+  '\b(?:realise)\b': realize
+  '\b(?:recognise)\b': recognize
+  '\b(?:standardise)\b': standardize
+  '\b(?:visualise)\b': visualize
+  # -isation → -ization
+  '\b(?:customisation)\b': customization
+  '\b(?:initialisation)\b': initialization
+  '\b(?:optimisation)\b': optimization
+  '\b(?:organisation)\b': organization
+  '\b(?:standardisation)\b': standardization
+  '\b(?:visualisation)\b': visualization
+  # -our → -or
   '\b(?:behaviour)\b': behavior
-  '\b(?:licence)\b': license
+  '\b(?:colour)\b': color
+  '\b(?:flavour)\b': flavor
+  # -ce → -se
   '\b(?:defence)\b': defense
+  '\b(?:licence)\b': license
   '\b(?:pretence)\b': pretense
-  '\b(?:dialogue)\b': dialog
+  # -ogue → og
   '\b(?:catalogue)\b': catalog
+  '\b(?:dialogue)\b': dialog
   '\b(?:epilogue)\b': epilog
+  # misc
+  '\b(?:grey)\b': gray
+  '\b(?:programme)\b': program
