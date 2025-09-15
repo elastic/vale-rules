@@ -5,12 +5,14 @@ ignorecase: true
 action:
   name: replace
 swap:
+  'a FAQ': an FAQ
   'a HTML': an HTML
   'a HTTP': an HTTP
   'a HTTPS': an HTTPS
   'a SQL': an SQL
   'a SSH': an SSH
   'a SSL': an SSL
+  'a SDK': an SDK
   'a XML': an XML
   'a API': an API
   'a IDE': an IDE
@@ -26,7 +28,5 @@ swap:
   'an CPU': a CPU
   'an GPU': a GPU
   'an RAM': a RAM
-  'an SDK': a SDK
-  'an FAQ': a FAQ
   'an CSV': a CSV
   'an JSON': a JSON
