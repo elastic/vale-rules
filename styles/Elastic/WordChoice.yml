@@ -14,12 +14,12 @@ swap:
   could: "can, might"
   delete: "remove"
   duplicate: "copy"
-  "e\.g\.": "for example"
+  'e\.?g[,.]?': for example
+  'i\.?e[,.]?': that is
   "eg.": "for example"
   execute: "run, start"
   hack: "tip, workaround, configure, modify"
   hit: "select, press, visits"
-  "i.e.": "that is"
   "ie.": "that is"
   invalid: "not valid, incorrect"
   kill: "cancel, stop"
