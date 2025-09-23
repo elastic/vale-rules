@@ -22,7 +22,6 @@ swap:
   launch: "open"
   may: "can, might"
   open: "start"
-  remove: "delete"
   see: "refer to (if it's a document), view (if it's a UI element)"
   start: "begin"
   terminate: "stop, exit"
