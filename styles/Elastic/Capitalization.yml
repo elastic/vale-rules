@@ -19,7 +19,9 @@ exceptions:
   - CCR
   - CCS
   - CLI
+  - Cloud
   - Cloud UI
+  - CloudFormation
   - Console
   - CRD
   - CSS
@@ -51,6 +53,7 @@ exceptions:
   - Feature Controls
   - Fleet
   - Fleet Server
+  - Forwarder
   - GCP
   - GCS
   - GeoJSON
@@ -98,6 +101,7 @@ exceptions:
   - Serverless
   - Self-managed
   - Spaces
+  - S3
   - SQL
   - Stack Management
   - Stack Monitoring
