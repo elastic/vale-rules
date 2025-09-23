@@ -98,6 +98,7 @@ exceptions:
   - OSS
   - OT
   - OTel
+  - OTLP
   - PaaS
   - PATH
   - PDF
