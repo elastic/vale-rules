@@ -100,6 +100,7 @@ exceptions:
   - REST
   - RUM
   - Rules
+  - SDK
   - Search AI
   - Security
   - Serverless
