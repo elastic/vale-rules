@@ -3,6 +3,8 @@ message: "Consider using '%s' instead of '%s'."
 link: https://docs.elastic.dev/tech-writing-guidelines/voice-tone
 ignorecase: true
 level: suggestion
+scope:
+  - ~text.frontmatter.navigation_title
 action:
   name: replace
 swap:

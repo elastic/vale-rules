@@ -2,7 +2,9 @@ extends: capitalization
 message: "'%s' should use sentence-style capitalization."
 link: https://docs.elastic.dev/tech-writing-guidelines/content-structure
 level: suggestion
-scope: heading
+scope: 
+  - heading
+  - ~text.frontmatter.navigation_title
 match: $sentence
 exceptions:
   - AI
@@ -16,6 +18,7 @@ exceptions:
   - Beats
   - CA
   - Canvas
+  - Code
   - CCR
   - CCS
   - CLI
@@ -79,6 +82,7 @@ exceptions:
   - Lens
   - Logstash
   - Lucene
+  - macOS
   - Machine Learning
   - Managed
   - Maps
@@ -119,6 +123,7 @@ exceptions:
   - URL
   - User Experience
   - Vega
+  - VS
   - Watcher
   - Web Map Service
   - WMS
