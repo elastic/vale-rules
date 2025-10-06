@@ -2,9 +2,7 @@ extends: capitalization
 message: "'%s' should use sentence-style capitalization."
 link: https://docs.elastic.dev/tech-writing-guidelines/content-structure
 level: suggestion
-scope: 
-  - heading
-  - ~text.frontmatter.navigation_title
+scope: heading
 match: $sentence
 exceptions:
   - AI
