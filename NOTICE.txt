@@ -1,0 +1,2 @@
+Elastic style guide for the Vale linter
+Copyright 2025 Elasticsearch B.V.
