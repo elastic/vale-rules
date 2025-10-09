@@ -1,6 +1,5 @@
 extends: existence
 message: "Use semicolons judiciously."
-link: 'https://docs.elastic.dev/tech-writing-guidelines/grammar-spelling'
 nonword: true
 scope: sentence
 level: suggestion

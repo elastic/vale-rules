@@ -1,6 +1,5 @@
 extends: substitution
 message: "Use meaningful link text. Use '%s' instead of '%s'."
-link: 'https://docs.elastic.dev/tech-writing-guidelines/accessibility'
 level: suggestion
 ignorecase: true
 action:
