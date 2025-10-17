@@ -1,9 +1,0 @@
-extends: existence
-message: "Don't use '%s'."
-ignorecase: true
-level: suggestion
-tokens:
-  - simple
-  - simply
-  - easy
-  - easily
