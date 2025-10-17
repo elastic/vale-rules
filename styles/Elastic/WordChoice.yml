@@ -1,6 +1,6 @@
 extends: substitution
 message: "Consider using '%s' instead of '%s', unless the term is in the UI."
-link: https://docs.elastic.dev/tech-writing-guidelines/word-choice
+link: https://stunning-adventure-qrvr1k2.pages.github.io/style-guide/word-choice/
 ignorecase: true
 level: suggestion
 action:
@@ -11,15 +11,12 @@ swap:
   abuse: "misuse"
   blacklist: "blocklist"
   boot: "start, run"
-  choose: "select"
   clone: "copy"
-  could: "can, might"
   delete: "remove"
   disable: "deactivate, deselect, hide, turn off"
   disabled: "deactivated, deselected, hidden, turned off, unavailable"
   disables: "deactivates, deselects, hides, turns off, makes unavailable"
   dummy data: "placeholder data"
-  duplicate: "copy"
   easy: "efficient"
   easily: "efficiently"
   execute: "run, start"
@@ -33,14 +30,11 @@ swap:
   mankind: "all, everyone, humanity, humankind"
   may: "can, might"
   mute: "turn off, silence"
-  open: "start"
   sanity check: "review"
   see: "refer to (if it's a document), view (if it's a UI element)"
   simple: "efficient"
   simply: "efficiently"
   skin-toned: "dark brown, cream, beige"
-  start: "begin"
   terminate: "stop, exit"
-  type: "enter"
   unable: "cannot"
   whitelist: "allowlist"
