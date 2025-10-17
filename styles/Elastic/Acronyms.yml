@@ -110,6 +110,7 @@ exceptions:
   - RAM
   - RBAC
   - REPL
+  - REST
   - RRF
   - RSA
   - RUM
@@ -145,6 +146,7 @@ exceptions:
   - VM
   - VT
   - WDE
+  - XDR
   - XML
   - XSS
   - YAML

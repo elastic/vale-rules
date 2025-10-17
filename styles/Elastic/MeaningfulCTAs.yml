@@ -5,4 +5,4 @@ ignorecase: true
 action:
   name: replace
 swap:
-  'click here': visit, go to
+  'click here': visit, go to, refer to

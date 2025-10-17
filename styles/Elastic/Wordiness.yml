@@ -38,7 +38,7 @@ swap:
   at a later date: later
   at all times: always
   at the present time: now
-  at this point in time: at this point
+  at this point in time: now, then
   based in large part on: based on
   based on the fact that: because
   basic necessity: necessity
@@ -100,7 +100,7 @@ swap:
   make reference to: refer to
   mix together: mix
   none at all: none
-  not in a position to: unable
+  not in a position to: cannot
   not possible: impossible
   of major importance: important
   perform an assessment of: assess
@@ -120,7 +120,6 @@ swap:
   there is no doubt but that: doubtless
   this day and age: this age
   this is a subject that: this subject
-  time (?:frame|period): time
   under the provisions of: under
   until such time as: until
   used for fuel purposes: used for fuel
