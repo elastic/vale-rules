@@ -1,6 +1,6 @@
 extends: substitution
 message: "Consider using '%s' instead of '%s'."
-link: https://docs.elastic.dev/tech-writing-guidelines/accessibility
+link: https://stunning-adventure-qrvr1k2.pages.github.io/tech-writing-guidelines/accessibility
 ignorecase: true
 level: suggestion
 action:

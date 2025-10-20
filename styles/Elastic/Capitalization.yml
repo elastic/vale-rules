@@ -1,6 +1,6 @@
 extends: capitalization
 message: "'%s' should use sentence-style capitalization."
-link: https://docs.elastic.dev/tech-writing-guidelines/content-structure
+link: https://stunning-adventure-qrvr1k2.pages.github.io/tech-writing-guidelines/content-structure
 level: suggestion
 scope: heading
 match: $sentence

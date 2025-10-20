@@ -1,6 +1,6 @@
 extends: substitution
 message: "Use '%s' instead of '%s'. The article depends on pronunciation, not spelling."
-level: suggestion
+level: warning
 ignorecase: true
 action:
   name: replace
