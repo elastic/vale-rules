@@ -28,6 +28,8 @@ exceptions:
   - CSS
   - Dashboard
   - Discover
+  - Distribution
+  - Distributions
   - Discuss
   - ECE
   - ECK
@@ -90,6 +92,7 @@ exceptions:
   - NodeSet
   - Observability
   - OTLP
+  - OpenTelemetry
   - OpenShift
   - Painless
   - Painless Lab
