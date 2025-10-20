@@ -18,6 +18,9 @@ on:
 jobs:
   vale:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,10 +28,12 @@ jobs:
           fetch-depth: 0
       
       - name: Run Elastic Vale Linter
-        uses: elastic/vale-rules@v1
+        uses: elastic/vale-rules@main
         with:
           reporter: github-pr-review
 ```
+
+**Note:** Using `@main` ensures you always get the latest style rules. For stability, you can pin to a specific version tag once releases are available (e.g., `@v1.0.0`).
 
 ## Inputs
 
@@ -47,13 +52,13 @@ All inputs are optional:
 ### Basic usage (lint changed files in PR)
 
 ```yaml
-- uses: elastic/vale-rules@v1
+- uses: elastic/vale-rules@main
 ```
 
 ### Lint specific files or directories
 
 ```yaml
-- uses: elastic/vale-rules@v1
+- uses: elastic/vale-rules@main
   with:
     files: 'docs/ README.md'
 ```
@@ -61,7 +66,7 @@ All inputs are optional:
 ### Fail on errors
 
 ```yaml
-- uses: elastic/vale-rules@v1
+- uses: elastic/vale-rules@main
   with:
     fail_on_error: true
 ```
@@ -70,17 +75,17 @@ All inputs are optional:
 
 ```yaml
 # For inline PR comments
-- uses: elastic/vale-rules@v1
+- uses: elastic/vale-rules@main
   with:
     reporter: github-pr-review
 
 # For check run annotations
-- uses: elastic/vale-rules@v1
+- uses: elastic/vale-rules@main
   with:
     reporter: github-pr-check
 
 # For both
-- uses: elastic/vale-rules@v1
+- uses: elastic/vale-rules@main
   with:
     reporter: github-check
 ```
@@ -89,22 +94,22 @@ All inputs are optional:
 
 ```yaml
 # Only show issues on added lines (default)
-- uses: elastic/vale-rules@v1
+- uses: elastic/vale-rules@main
   with:
     filter_mode: added
 
 # Show issues on the entire diff context
-- uses: elastic/vale-rules@v1
+- uses: elastic/vale-rules@main
   with:
     filter_mode: diff_context
 
 # Show all issues in changed files
-- uses: elastic/vale-rules@v1
+- uses: elastic/vale-rules@main
   with:
     filter_mode: file
 
 # Show all issues (no filtering)
-- uses: elastic/vale-rules@v1
+- uses: elastic/vale-rules@main
   with:
     filter_mode: nofilter
 ```
@@ -138,7 +143,7 @@ jobs:
           fetch-depth: 0  # Required for proper diff analysis
       
       - name: Run Vale with Elastic style guide
-        uses: elastic/vale-rules@v1
+        uses: elastic/vale-rules@main
         with:
           reporter: github-pr-review
           filter_mode: added

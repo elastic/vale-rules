@@ -29,10 +29,12 @@ jobs:
         with:
           fetch-depth: 0
       
-      - uses: elastic/vale-rules@v1
+      - uses: elastic/vale-rules@main
         with:
           reporter: github-pr-review
 ```
+
+**Note:** Using `@main` ensures you always get the latest style rules automatically.
 
 See [ACTION_USAGE.md](ACTION_USAGE.md) for detailed documentation and examples.
 
@@ -42,22 +44,22 @@ Clone the repository and run the automated installation script for your platform
 
 **macOS:**
 ```bash
-git clone https://github.com/elastic/elastic-style-guide.git
-cd elastic-style-guide
+git clone https://github.com/elastic/vale-rules.git
+cd vale-rules
 ./install-macos.sh
 ```
 
 **Linux:**
 ```bash
-git clone https://github.com/elastic/elastic-style-guide.git
-cd elastic-style-guide
+git clone https://github.com/elastic/vale-rules.git
+cd vale-rules
 ./install-linux.sh
 ```
 
 **Windows (PowerShell):**
 ```powershell
-git clone https://github.com/elastic/elastic-style-guide.git
-cd elastic-style-guide
+git clone https://github.com/elastic/vale-rules.git
+cd vale-rules
 .\install-windows.ps1
 ```
 
@@ -98,7 +100,7 @@ To update to the latest style guide rules, you can either:
 **Option 1: Re-run the installation script**
 ```bash
 # macOS/Linux
-cd elastic-style-guide
+cd vale-rules
 ./install-macos.sh  # or ./install-linux.sh
 
 # Windows
