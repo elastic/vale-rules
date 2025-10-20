@@ -4,7 +4,39 @@ This repo contains a set of linting rules for Vale based on the Elastic style gu
 
 ## Get started
 
-### Quick installation
+### Use in GitHub Actions (recommended for repositories)
+
+Add the Elastic Vale linter to your repository's CI/CD pipeline:
+
+```yaml
+# .github/workflows/vale-lint.yml
+name: Vale Documentation Linting
+
+on:
+  pull_request:
+    paths:
+      - '**.md'
+      - '**.adoc'
+
+jobs:
+  vale:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - uses: elastic/vale-rules@v1
+        with:
+          reporter: github-pr-review
+```
+
+See [ACTION_USAGE.md](ACTION_USAGE.md) for detailed documentation and examples.
+
+### Local installation
 
 Clone the repository and run the automated installation script for your platform:
 
@@ -37,6 +69,8 @@ Install the [Vale VSCode](https://marketplace.visualstudio.com/items?itemName=Ch
 
 ## Folder structure
 
+- `action.yml` - GitHub Action definition for using this as a reusable action
+- `ACTION_USAGE.md` - Detailed documentation for using the GitHub Action
 - `install-macos.sh` - Automated installation script for macOS
 - `install-linux.sh` - Automated installation script for Linux
 - `install-windows.ps1` - Automated installation script for Windows

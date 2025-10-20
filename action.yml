@@ -1,0 +1,179 @@
+name: 'Elastic Vale Linter'
+description: 'Run Vale with Elastic style guide on documentation files'
+author: 'Elastic'
+
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+inputs:
+  files:
+    description: 'Files or directories to lint (space-separated). If not provided, lints changed files in PR.'
+    required: false
+    default: ''
+  fail_on_error:
+    description: 'Fail the action if Vale finds errors'
+    required: false
+    default: 'false'
+  reporter:
+    description: 'Reviewdog reporter (github-pr-review, github-pr-check, github-check)'
+    required: false
+    default: 'github-pr-review'
+  filter_mode:
+    description: 'Reviewdog filter mode (added, diff_context, file, nofilter)'
+    required: false
+    default: 'added'
+  vale_version:
+    description: 'Vale version to install (default: latest via package manager)'
+    required: false
+    default: 'latest'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Detect OS
+      id: detect-os
+      shell: bash
+      run: |
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          echo "os=macos" >> $GITHUB_OUTPUT
+        elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+          echo "os=linux" >> $GITHUB_OUTPUT
+        else
+          echo "os=unknown" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Install Vale (macOS)
+      if: steps.detect-os.outputs.os == 'macos'
+      shell: bash
+      run: |
+        if ! command -v vale &> /dev/null; then
+          echo "Installing Vale via Homebrew..."
+          brew install vale
+        else
+          echo "Vale is already installed: $(vale --version)"
+        fi
+    
+    - name: Install Vale (Linux)
+      if: steps.detect-os.outputs.os == 'linux'
+      shell: bash
+      run: |
+        if ! command -v vale &> /dev/null; then
+          echo "Installing Vale via snap..."
+          sudo snap install vale
+        else
+          echo "Vale is already installed: $(vale --version)"
+        fi
+    
+    - name: Configure Vale with Elastic style guide
+      shell: bash
+      run: |
+        # Create a temporary .vale.ini for this run
+        cat > .vale.ini.temp << 'EOF'
+        StylesPath = .vale-styles
+        MinAlertLevel = suggestion
+        
+        Packages = https://github.com/elastic/vale-rules/releases/latest/download/Elastic.zip
+        
+        [*.md]
+        BasedOnStyles = Elastic
+        
+        [*.adoc]
+        BasedOnStyles = Elastic
+        EOF
+        
+        # Sync the Elastic style package
+        echo "Downloading Elastic style guide..."
+        vale --config=.vale.ini.temp sync
+        
+        echo "Vale configured with Elastic style guide"
+    
+    - name: Get changed files
+      id: changed-files
+      if: inputs.files == ''
+      shell: bash
+      run: |
+        # Only get changed files if running in a PR context
+        if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+          echo "Detecting changed files in PR..."
+          git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
+            | grep -E '\.(md|adoc)$' > changed_files.txt || echo "No markdown/adoc files changed"
+          
+          if [ -s changed_files.txt ]; then
+            echo "Found changed files:"
+            cat changed_files.txt
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "No markdown or adoc files changed in this PR"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "Not running in PR context, no files to check"
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Determine files to lint
+      id: files-to-lint
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.files }}" ]; then
+          echo "Using provided files: ${{ inputs.files }}"
+          echo "${{ inputs.files }}" | tr ' ' '\n' > files_to_lint.txt
+          echo "has_files=true" >> $GITHUB_OUTPUT
+        elif [ "${{ steps.changed-files.outputs.has_changes }}" == "true" ]; then
+          echo "Using changed files from PR"
+          cp changed_files.txt files_to_lint.txt
+          echo "has_files=true" >> $GITHUB_OUTPUT
+        else
+          echo "No files to lint"
+          echo "has_files=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Install reviewdog
+      if: steps.files-to-lint.outputs.has_files == 'true'
+      uses: reviewdog/action-setup@v1
+      with:
+        reviewdog_version: latest
+    
+    - name: Run Vale with reviewdog
+      if: steps.files-to-lint.outputs.has_files == 'true'
+      shell: bash
+      env:
+        REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+      run: |
+        echo "Running Vale on files..."
+        
+        # Run Vale on each file
+        while IFS= read -r file; do
+          if [ -f "$file" ]; then
+            echo "Linting: $file"
+            vale --config=.vale.ini.temp --output=line "$file" 2>&1 || true
+          fi
+        done < files_to_lint.txt > vale_output.txt
+        
+        # Show output
+        if [ -s vale_output.txt ]; then
+          echo "Vale found the following issues:"
+          cat vale_output.txt
+          
+          # Send to reviewdog
+          cat vale_output.txt | \
+          reviewdog -efm="%f:%l:%c:%m" \
+            -name="Elastic Vale" \
+            -reporter="${{ inputs.reporter }}" \
+            -filter-mode="${{ inputs.filter_mode }}" \
+            -fail-on-error="${{ inputs.fail_on_error }}"
+        else
+          echo "✓ No Vale issues found"
+        fi
+    
+    - name: Cleanup
+      if: always()
+      shell: bash
+      run: |
+        rm -f .vale.ini.temp
+        rm -f changed_files.txt
+        rm -f files_to_lint.txt
+        rm -f vale_output.txt
+        rm -rf .vale-styles
+
