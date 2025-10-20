@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'  # Triggers on version tags like v1.0.0, v2.1.3, etc.
+  workflow_dispatch:  # Allows manual triggering from GitHub Actions UI
 
 jobs:
   release:
@@ -15,16 +16,12 @@ jobs:
         
       - name: Create Vale package
         run: |
-          # Create a temporary directory for the package
-          mkdir -p vale-package
+          # Create a Style-only package (just the Elastic style folder)
+          # Vale expects the style folder at the root of the zip
           
-          # Copy .vale.ini and styles folder to the package directory
-          cp .vale.ini vale-package/
-          cp -r styles vale-package/
-          
-          # Create the zip file
-          cd vale-package
-          zip -r ../elastic-vale.zip .
+          # Create the zip file with the Elastic style at root
+          cd styles
+          zip -r ../elastic-vale.zip Elastic/
           cd ..
           
           # Verify the package contents
@@ -33,7 +30,12 @@ jobs:
           
       - name: Extract version from tag
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=manual-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          fi
         
       - name: Create release
         id: create_release
@@ -41,23 +43,27 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
           release_name: Release ${{ steps.get_version.outputs.VERSION }}
           body: |
             Vale style guide package for Elastic documentation.
             
-            This package contains:
-            - `.vale.ini` configuration file
-            - `styles/Elastic/` folder with all style rules
+            This is a style-only package containing the `Elastic` style with all style rules.
             
             ## Installation
             
             Add the following to your project's or system's `.vale.ini` file:
             
             ```ini
-            Packages = https://github.com/elastic/vale-style-guide/releases/download/latest/elastic-vale.zip
+            StylesPath = styles
+            MinAlertLevel = suggestion
+            
+            Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
             
             [*.md]
+            BasedOnStyles = Elastic
+            
+            [*.adoc]
             BasedOnStyles = Elastic
             ```
             
@@ -67,18 +73,13 @@ jobs:
             vale sync
             ```
             
-            ## Alternative: Manual Installation
+            The `Elastic` style will be automatically downloaded to your `StylesPath`.
+            
+            ## Alternative: Manual installation
             
             1. Download and extract `elastic-vale.zip`
-            2. Place the contents in your desired location
-            3. Update your Vale configuration to point to this StylesPath:
-            
-            ```ini
-            StylesPath = path/to/extracted/styles
-            
-            [*.md]
-            BasedOnStyles = Elastic
-            ```
+            2. Place the `Elastic/` folder in your Vale `StylesPath`
+            3. Add `BasedOnStyles = Elastic` to your `.vale.ini` file
           draft: false
           prerelease: false
           
