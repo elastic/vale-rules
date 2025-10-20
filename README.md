@@ -130,7 +130,7 @@ git push origin v1.0.1
 The GitHub workflow automatically:
 
 - Adds a VERSION file to the Elastic style directory.
-- Packages the `.vale.ini` and `styles/` folder into `Elastic.zip` (a Vale complete package).
+- Packages the `.vale.ini` and `styles/` folder into `elastic-vale.zip` (a Vale complete package).
 - Creates a new GitHub release with the version tag.
 - Uploads the package as a release asset.
 

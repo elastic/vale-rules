@@ -36,12 +36,12 @@ jobs:
           cp .vale.ini elastic-vale/
           cp -r styles elastic-vale/
           
-          # Create the zip file
-          zip -r Elastic.zip elastic-vale/
+          # Create the zip file (name must match root directory for Vale to find it)
+          zip -r elastic-vale.zip elastic-vale/
           
           # Verify the package contents
           echo "Package contents:"
-          unzip -l Elastic.zip
+          unzip -l elastic-vale.zip
           
       - name: Create release and upload asset
         uses: softprops/action-gh-release@v2
@@ -60,7 +60,7 @@ jobs:
             Add the following to your project's `.vale.ini` file:
             
             ```ini
-            Packages = https://github.com/elastic/vale-rules/releases/latest/download/Elastic.zip
+            Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
             ```
             
             Then run:
@@ -73,7 +73,7 @@ jobs:
             
             ### Option 2: Manual installation
             
-            1. Download and extract `Elastic.zip`
+            1. Download and extract `elastic-vale.zip`
             2. Use the included `.vale.ini` as a reference or starting point for your configuration
             3. Copy the `styles/Elastic/` folder to your Vale `StylesPath`
             
@@ -82,4 +82,4 @@ jobs:
             For global installation, use our platform-specific scripts from the repository.
           draft: false
           prerelease: false
-          files: Elastic.zip
+          files: elastic-vale.zip
