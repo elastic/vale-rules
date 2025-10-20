@@ -162,10 +162,11 @@ The action automatically detects the runner OS and installs Vale accordingly:
 
 1. Detects the operating system
 2. Installs Vale if not already present
-3. Downloads the latest Elastic style guide package from this repository
-4. Identifies files to lint (changed files in PR or specified files)
-5. Runs Vale on the files
-6. Posts results as PR comments or check annotations via reviewdog
+3. Downloads the latest Elastic style guide package from this repository (includes `.vale.ini` configuration and styles)
+4. Vale automatically merges the packaged configuration settings (SkippedScopes, IgnoredScopes, TokenIgnores, etc.)
+5. Identifies files to lint (changed files in PR or specified files)
+6. Runs Vale on the files with the Elastic configuration
+7. Posts results as PR comments or check annotations via reviewdog
 
 ## Permissions required
 
@@ -227,4 +228,3 @@ Then run Vale on your files:
 ```bash
 vale path/to/your/docs
 ```
-

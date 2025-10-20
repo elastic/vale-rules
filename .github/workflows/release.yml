@@ -25,17 +25,19 @@ jobs:
       
       - name: Create Vale package
         run: |
-          # Create a Style-only package (just the Elastic style folder)
-          # Vale expects the style folder at the root of the zip
+          # Create a complete package with .vale.ini and styles folder
+          # This ensures everyone gets the same configuration
           
           # Add VERSION file to the Elastic style
           echo "${{ steps.get_version.outputs.VERSION }}" > styles/Elastic/VERSION
           
-          # Create the zip file with the Elastic style at root
-          # The zip filename must match the style directory name
-          cd styles
-          zip -r ../Elastic.zip Elastic/
-          cd ..
+          # Create package directory structure
+          mkdir -p elastic-vale
+          cp .vale.ini elastic-vale/
+          cp -r styles elastic-vale/
+          
+          # Create the zip file
+          zip -r Elastic.zip elastic-vale/
           
           # Verify the package contents
           echo "Package contents:"
@@ -49,23 +51,16 @@ jobs:
           body: |
             Vale style guide package for Elastic documentation.
             
-            This is a style-only package containing the `Elastic` style with all style rules.
+            This is a complete package containing the `.vale.ini` configuration file and the `Elastic` style with all style rules.
             
             ## Installation
             
-            Add the following to your project's or system's `.vale.ini` file:
+            ### Option 1: Use as a package (recommended)
+            
+            Add the following to your project's `.vale.ini` file:
             
             ```ini
-            StylesPath = styles
-            MinAlertLevel = suggestion
-            
             Packages = https://github.com/elastic/vale-rules/releases/latest/download/Elastic.zip
-            
-            [*.md]
-            BasedOnStyles = Elastic
-            
-            [*.adoc]
-            BasedOnStyles = Elastic
             ```
             
             Then run:
@@ -74,13 +69,17 @@ jobs:
             vale sync
             ```
             
-            The `Elastic` style will be automatically downloaded to your `StylesPath`.
+            The Elastic configuration and styles will be automatically downloaded and merged with your local setup.
             
-            ## Alternative: Manual installation
+            ### Option 2: Manual installation
             
             1. Download and extract `Elastic.zip`
-            2. Place the `Elastic/` folder in your Vale `StylesPath`
-            3. Add `BasedOnStyles = Elastic` to your `.vale.ini` file
+            2. Use the included `.vale.ini` as a reference or starting point for your configuration
+            3. Copy the `styles/Elastic/` folder to your Vale `StylesPath`
+            
+            ### Option 3: Use installation scripts
+            
+            For global installation, use our platform-specific scripts from the repository.
           draft: false
           prerelease: false
           files: Elastic.zip
