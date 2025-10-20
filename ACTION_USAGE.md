@@ -228,7 +228,3 @@ Then run Vale on your files:
 ```bash
 vale path/to/your/docs
 ```
-
-```
-[esql] > Unexpected error from Elasticsearch: The content length (536885793) is bigger than the maximum allowed string (536870888)
-```
