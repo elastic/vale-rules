@@ -4,7 +4,7 @@ This repo contains a set of linting rules for Vale based on the Elastic style gu
 
 ## Get started
 
-### Use in GitHub Actions (recommended for repositories)
+### Use in GitHub Actions
 
 Add the Elastic Vale linter to your repository's CI/CD pipeline:
 
@@ -34,40 +34,31 @@ jobs:
           reporter: github-pr-review
 ```
 
-**Note:** Using `@main` ensures you always get the latest style rules automatically.
-
-See [ACTION_USAGE.md](ACTION_USAGE.md) for detailed documentation and examples.
+Refer to [ACTION_USAGE.md](ACTION_USAGE.md) for detailed documentation and examples.
 
 ### Local installation
 
-Clone the repository and run the automated installation script for your platform:
+Run these commands to install the Elastic style guide locally:
 
 **macOS:**
 ```bash
-git clone https://github.com/elastic/vale-rules.git
-cd vale-rules
-./install-macos.sh
+curl -fsSL https://raw.githubusercontent.com/elastic/vale-rules/main/install-macos.sh | bash
 ```
 
 **Linux:**
 ```bash
-git clone https://github.com/elastic/vale-rules.git
-cd vale-rules
-./install-linux.sh
+curl -fsSL https://raw.githubusercontent.com/elastic/vale-rules/main/install-linux.sh | bash
 ```
 
 **Windows (PowerShell):**
 ```powershell
-git clone https://github.com/elastic/vale-rules.git
-cd vale-rules
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/elastic/vale-rules/main/install-windows.ps1 -OutFile install-windows.ps1
 .\install-windows.ps1
 ```
 
-The scripts install Vale (if needed) and configure it to use the Elastic style guide via Vale's package system.
+## Install the VS Code extension
 
-### Install the VS Code extension
-
-Install the [Vale VSCode](https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode) extension to see Vale checks when saving a document.
+Install the [Vale VSCode](https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode) extension to view Vale checks when saving a document.
 
 ## Folder structure
 
@@ -95,24 +86,7 @@ The installation scripts create Vale configurations at platform-specific locatio
 
 ## Updating
 
-To update to the latest style guide rules, you can either:
-
-**Option 1: Re-run the installation script**
-```bash
-# macOS/Linux
-cd vale-rules
-./install-macos.sh  # or ./install-linux.sh
-
-# Windows
-.\install-windows.ps1
-```
-
-**Option 2: Use Vale's sync command**
-```bash
-vale sync
-```
-
-Both methods will download and install the latest version of the Elastic style guide.
+To update to the latest style guide rules, rerun the installation script.
 
 ## Creating releases
 
