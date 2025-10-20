@@ -90,30 +90,38 @@ if [ "$VALE_ALREADY_INSTALLED" = false ]; then
     fi
 fi
 
-# 4. Clean existing Vale installation
+# 4. Check existing Vale installation
 VALE_CONFIG_DIR="$HOME/Library/Application Support/vale"
-print_info "Cleaning existing Vale installation..."
+VALE_CONFIG_FILE="$VALE_CONFIG_DIR/.vale.ini"
+VALE_STYLES_DIR="$VALE_CONFIG_DIR/styles"
+
 if [ -d "$VALE_CONFIG_DIR" ]; then
-    print_info "Removing existing Vale directory: $VALE_CONFIG_DIR"
-    if rm -rf "$VALE_CONFIG_DIR"; then
-        print_success "✓ Existing Vale installation cleaned"
+    print_info "Existing Vale installation detected at: $VALE_CONFIG_DIR"
+    
+    # Check if it's an Elastic installation
+    if [ -d "$VALE_STYLES_DIR/Elastic" ] || grep -q "elastic-vale.zip" "$VALE_CONFIG_FILE" 2>/dev/null; then
+        print_info "Detected existing Elastic Vale installation - will update"
     else
-        print_error "Failed to clean existing Vale installation"
-        exit 1
+        print_info "Detected non-Elastic Vale installation"
+        echo -n "This will replace your existing Vale configuration. Continue? [y/N] "
+        read -r response
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            print_info "Installation cancelled by user"
+            exit 0
+        fi
+        print_info "Removing existing Vale installation..."
+        rm -rf "$VALE_CONFIG_DIR"
     fi
 else
     print_info "No existing Vale installation found"
 fi
 
 # 5. Create or update Vale configuration directory and file
-VALE_CONFIG_DIR="$HOME/Library/Application Support/vale"
-VALE_CONFIG_FILE="$VALE_CONFIG_DIR/.vale.ini"
-
 print_info "Setting up Vale configuration..."
 mkdir -p "$VALE_CONFIG_DIR"
 
 # Create the .vale.ini file
-print_info "Creating new configuration at $VALE_CONFIG_FILE..."
+print_info "Creating configuration at $VALE_CONFIG_FILE..."
 
 # Create minimal .vale.ini - the package will provide the full config via merge
 cat > "$VALE_CONFIG_FILE" << 'EOF'
@@ -134,7 +142,6 @@ else
 fi
 
 # 7. Verify that the installed styles are accessible
-VALE_STYLES_DIR="$VALE_CONFIG_DIR/styles"
 print_info "Verifying installed style guide..."
 if [ -d "$VALE_STYLES_DIR/Elastic" ] && ls "$VALE_STYLES_DIR/Elastic"/*.yml > /dev/null 2>&1; then
     # Check if VERSION file exists and read it

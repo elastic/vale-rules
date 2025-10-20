@@ -138,18 +138,39 @@ if (-not $valeAlreadyInstalled) {
 # 4. Set up Vale directories
 $valeConfigDir = "$env:LOCALAPPDATA\vale"
 $valeConfigFile = "$valeConfigDir\.vale.ini"
+$valeStylesDir = "$valeConfigDir\styles"
 
-# 5. Clean existing Vale installation
-Write-Info "Cleaning existing Vale installation..."
+# 5. Check existing Vale installation
 if (Test-Path $valeConfigDir) {
-    Write-Info "Removing existing Vale directory: $valeConfigDir"
-    try {
-        Remove-Item -Path $valeConfigDir -Recurse -Force
-        Write-Success "✓ Existing Vale installation cleaned"
+    Write-Info "Existing Vale installation detected at: $valeConfigDir"
+    
+    # Check if it's an Elastic installation
+    $isElastic = $false
+    if (Test-Path "$valeStylesDir\Elastic") {
+        $isElastic = $true
     }
-    catch {
-        Write-ErrorMsg "Failed to clean existing Vale installation: $_"
-        exit 1
+    if ((Test-Path $valeConfigFile) -and (Get-Content $valeConfigFile -Raw | Select-String -Pattern "elastic-vale.zip" -Quiet)) {
+        $isElastic = $true
+    }
+    
+    if ($isElastic) {
+        Write-Info "Detected existing Elastic Vale installation - will update"
+    }
+    else {
+        Write-Info "Detected non-Elastic Vale installation"
+        $response = Read-Host "This will replace your existing Vale configuration. Continue? [y/N]"
+        if ($response -notmatch "^[Yy]$") {
+            Write-Info "Installation cancelled by user"
+            exit 0
+        }
+        Write-Info "Removing existing Vale installation..."
+        try {
+            Remove-Item -Path $valeConfigDir -Recurse -Force
+        }
+        catch {
+            Write-ErrorMsg "Failed to remove existing Vale installation: $_"
+            exit 1
+        }
     }
 }
 else {
@@ -161,7 +182,7 @@ Write-Info "Setting up Vale configuration..."
 New-Item -ItemType Directory -Path $valeConfigDir -Force | Out-Null
 
 # Create the .vale.ini file
-Write-Info "Creating new configuration at $valeConfigFile..."
+Write-Info "Creating configuration at $valeConfigFile..."
 
 # Create minimal .vale.ini - the package will provide the full config via merge
 $configContent = @"
@@ -186,7 +207,6 @@ catch {
 }
 
 # 8. Verify that the installed styles are accessible
-$valeStylesDir = "$valeConfigDir\styles"
 Write-Info "Verifying installed style guide..."
 if ((Test-Path "$valeStylesDir\Elastic") -and (Get-ChildItem "$valeStylesDir\Elastic\*.yml" -ErrorAction SilentlyContinue)) {
     # Check if VERSION file exists and read it
