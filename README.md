@@ -4,17 +4,32 @@ This repo contains a set of linting rules for Vale based on the Elastic style gu
 
 ## Get started
 
-### Quick installation for macOS
+### Quick installation
 
-Clone the repository and run the automated installation script:
+Clone the repository and run the automated installation script for your platform:
 
+**macOS:**
 ```bash
 git clone https://github.com/elastic/elastic-style-guide.git
 cd elastic-style-guide
 ./install-macos.sh
 ```
 
-The script ensures you always get the latest version of the style guide by updating the repository and performing a clean installation each time it's run.
+**Linux:**
+```bash
+git clone https://github.com/elastic/elastic-style-guide.git
+cd elastic-style-guide
+./install-linux.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/elastic/elastic-style-guide.git
+cd elastic-style-guide
+.\install-windows.ps1
+```
+
+The scripts install Vale (if needed) and configure it to use the Elastic style guide via Vale's package system.
 
 ### Install the VS Code extension
 
@@ -23,23 +38,45 @@ Install the [Vale VSCode](https://marketplace.visualstudio.com/items?itemName=Ch
 ## Folder structure
 
 - `install-macos.sh` - Automated installation script for macOS
+- `install-linux.sh` - Automated installation script for Linux
+- `install-windows.ps1` - Automated installation script for Windows
 - `styles/Elastic/` - Contains the Elastic linting rules for Vale. See [Styles](https://vale.sh/docs/topics/styles/)
 - `.github/workflows/` - CI/CD workflows for testing and releases
 
-The installation script creates:
-- `~/.vale.ini` - Vale configuration file pointing to the Elastic styles
-- `~/Library/Application Support/vale/styles/Elastic/` - Copy of the Elastic style rules
+The installation scripts create Vale configurations at platform-specific locations:
+
+**macOS:**
+- `~/Library/Application Support/vale/.vale.ini` - Vale configuration file
+- `~/Library/Application Support/vale/styles/Elastic/` - Elastic style rules
+
+**Linux:**
+- `~/.config/vale/.vale.ini` - Vale configuration file
+- `~/.local/share/vale/styles/Elastic/` - Elastic style rules
+
+**Windows:**
+- `%LOCALAPPDATA%\vale\.vale.ini` - Vale configuration file
+- `%LOCALAPPDATA%\vale\styles\Elastic\` - Elastic style rules
 
 ## Updating
 
-To update to the latest style guide rules, re-run the installation script:
+To update to the latest style guide rules, you can either:
 
+**Option 1: Re-run the installation script**
 ```bash
+# macOS/Linux
 cd elastic-style-guide
-./install-macos.sh
+./install-macos.sh  # or ./install-linux.sh
+
+# Windows
+.\install-windows.ps1
 ```
 
-The script pulls the latest changes and reinstalls everything fresh.
+**Option 2: Use Vale's sync command**
+```bash
+vale sync
+```
+
+Both methods will download and install the latest version of the Elastic style guide.
 
 ## Creating releases
 
@@ -50,15 +87,18 @@ To create a new release of the Vale package:
 3. Create and push a version tag:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
 The GitHub workflow automatically:
 
-- Packages the `.vale.ini` file and `styles` folder into `elastic-vale.zip`.
+- Adds a VERSION file to the Elastic style directory.
+- Packages the `styles/Elastic/` folder into `Elastic.zip` (a Vale style-only package).
 - Creates a new GitHub release with the version tag.
 - Uploads the package as a release asset.
+
+Users can then install or update to this version using the installation scripts or by running `vale sync`.
 
 ## Resources
 
