@@ -144,7 +144,13 @@ fi
 VALE_STYLES_DIR="$VALE_CONFIG_DIR/styles"
 print_info "Verifying installed style guide..."
 if [ -d "$VALE_STYLES_DIR/Elastic" ] && ls "$VALE_STYLES_DIR/Elastic"/*.yml > /dev/null 2>&1; then
-    print_success "✓ Elastic styles installed and accessible"
+    # Check if VERSION file exists and read it
+    if [ -f "$VALE_STYLES_DIR/Elastic/VERSION" ]; then
+        INSTALLED_VERSION=$(cat "$VALE_STYLES_DIR/Elastic/VERSION")
+        print_success "✓ Elastic styles installed and accessible (version: $INSTALLED_VERSION)"
+    else
+        print_success "✓ Elastic styles installed and accessible"
+    fi
 else
     print_error "Elastic styles verification failed"
     exit 1
@@ -163,6 +169,10 @@ fi
 echo
 print_success "🎉 Installation completed successfully!"
 echo
+if [ -n "$INSTALLED_VERSION" ]; then
+    echo "Elastic Vale Style Guide version: $INSTALLED_VERSION"
+    echo
+fi
 echo "Vale is now configured with the Elastic style guide. You can:"
 echo "  • Run 'vale <file>' to check a specific file"
 echo "  • Run 'vale <directory>' to check all supported files in a directory"

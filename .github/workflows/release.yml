@@ -14,10 +14,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=manual-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Create Vale package
         run: |
           # Create a Style-only package (just the Elastic style folder)
           # Vale expects the style folder at the root of the zip
+          
+          # Add VERSION file to the Elastic style
+          echo "${{ steps.get_version.outputs.VERSION }}" > styles/Elastic/VERSION
           
           # Create the zip file with the Elastic style at root
           # The zip filename must match the style directory name
@@ -29,15 +41,6 @@ jobs:
           echo "Package contents:"
           unzip -l Elastic.zip
           
-      - name: Extract version from tag
-        id: get_version
-        run: |
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          else
-            echo "VERSION=manual-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
-          fi
-        
       - name: Create release and upload asset
         uses: softprops/action-gh-release@v2
         with:
