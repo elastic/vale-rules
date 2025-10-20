@@ -1,6 +1,6 @@
 extends: substitution
 message: "Consider using '%s' instead of '%s'."
-link: https://docs.elastic.dev/tech-writing-guidelines/voice-tone
+link: https://stunning-adventure-qrvr1k2.pages.github.io/tech-writing-guidelines/voice-tone
 ignorecase: true
 level: suggestion
 scope:

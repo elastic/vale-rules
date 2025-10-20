@@ -1,10 +1,11 @@
 extends: conditional
 message: "'%s' has no definition."
-link: https://docs.elastic.dev/tech-writing-guidelines/grammar-spelling
+link: https://stunning-adventure-qrvr1k2.pages.github.io/tech-writing-guidelines/grammar-spelling
 level: suggestion
 ignorecase: false
 scope:
   - ~text.frontmatter.navigation_title
+  - ~heading
 first: '\b([A-Z]{3,5})\b'
 second: '(?:\b[A-Z][a-z]+ )+\(([A-Z]{3,5})\)'
 exceptions:
@@ -61,6 +62,7 @@ exceptions:
   - HTML
   - HTTP
   - HTTPS
+  - ID
   - IDE
   - IIoT
   - ILM
@@ -142,6 +144,7 @@ exceptions:
   - URL
   - USB
   - UTF
+  - UUID
   - VDI
   - VM
   - VT

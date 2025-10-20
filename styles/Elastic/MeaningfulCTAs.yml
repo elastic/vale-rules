@@ -1,6 +1,6 @@
 extends: substitution
 message: "Use meaningful link text. Use '%s' instead of '%s'."
-level: suggestion
+level: warning
 ignorecase: true
 action:
   name: replace

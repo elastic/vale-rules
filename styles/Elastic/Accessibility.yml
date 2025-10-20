@@ -1,6 +1,6 @@
 extends: existence
 message: "Don't use language (such as '%s') that defines people by their disability."
-level: suggestion
+level: warning
 ignorecase: true
 tokens:
   - a victim of
