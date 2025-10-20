@@ -20,13 +20,14 @@ jobs:
           # Vale expects the style folder at the root of the zip
           
           # Create the zip file with the Elastic style at root
+          # The zip filename must match the style directory name
           cd styles
-          zip -r ../elastic-vale.zip Elastic/
+          zip -r ../Elastic.zip Elastic/
           cd ..
           
           # Verify the package contents
           echo "Package contents:"
-          unzip -l elastic-vale.zip
+          unzip -l Elastic.zip
           
       - name: Extract version from tag
         id: get_version
@@ -58,7 +59,7 @@ jobs:
             StylesPath = styles
             MinAlertLevel = suggestion
             
-            Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
+            Packages = https://github.com/elastic/vale-rules/releases/latest/download/Elastic.zip
             
             [*.md]
             BasedOnStyles = Elastic
@@ -77,7 +78,7 @@ jobs:
             
             ## Alternative: Manual installation
             
-            1. Download and extract `elastic-vale.zip`
+            1. Download and extract `Elastic.zip`
             2. Place the `Elastic/` folder in your Vale `StylesPath`
             3. Add `BasedOnStyles = Elastic` to your `.vale.ini` file
           draft: false
@@ -89,6 +90,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./elastic-vale.zip
-          asset_name: elastic-vale.zip
+          asset_path: ./Elastic.zip
+          asset_name: Elastic.zip
           asset_content_type: application/zip

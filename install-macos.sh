@@ -120,7 +120,7 @@ cat > "$VALE_CONFIG_FILE" << 'EOF'
 StylesPath = styles
 MinAlertLevel = suggestion
 
-Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
+Packages = https://github.com/elastic/vale-rules/releases/latest/download/Elastic.zip
 
 [*.md]
 BasedOnStyles = Elastic
