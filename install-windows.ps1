@@ -163,18 +163,11 @@ New-Item -ItemType Directory -Path $valeConfigDir -Force | Out-Null
 # Create the .vale.ini file
 Write-Info "Creating new configuration at $valeConfigFile..."
 
-# Create or overwrite the .vale.ini file with Packages configuration
+# Create minimal .vale.ini - the package will provide the full config via merge
 $configContent = @"
 StylesPath = styles
-MinAlertLevel = suggestion
 
 Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
-
-[*.md]
-BasedOnStyles = Elastic
-
-[*.adoc]
-BasedOnStyles = Elastic
 "@
 
 Set-Content -Path $valeConfigFile -Value $configContent -Encoding UTF8

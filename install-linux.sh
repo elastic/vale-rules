@@ -132,18 +132,11 @@ mkdir -p "$VALE_CONFIG_DIR"
 # Create the .vale.ini file
 print_info "Creating new configuration at $VALE_CONFIG_FILE..."
 
-# Create or overwrite the .vale.ini file with Packages configuration
+# Create minimal .vale.ini - the package will provide the full config via merge
 cat > "$VALE_CONFIG_FILE" << 'EOF'
 StylesPath = styles
-MinAlertLevel = suggestion
 
 Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
-
-[*.md]
-BasedOnStyles = Elastic
-
-[*.adoc]
-BasedOnStyles = Elastic
 EOF
 
 print_success "✓ Vale configuration created at: $VALE_CONFIG_FILE"

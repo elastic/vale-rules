@@ -68,22 +68,15 @@ runs:
     - name: Configure Vale with Elastic style guide
       shell: bash
       run: |
-        # Create a temporary .vale.ini for this run
-        # The package includes .vale.ini which Vale will merge automatically
+        # Create a minimal .vale.ini for this run
+        # Vale will download the package and merge its .vale.ini automatically
         cat > .vale.ini.temp << 'EOF'
         StylesPath = .vale-styles
-        MinAlertLevel = suggestion
         
         Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
-        
-        [*.md]
-        BasedOnStyles = Elastic
-        
-        [*.adoc]
-        BasedOnStyles = Elastic
         EOF
         
-        # Sync the Elastic style package (downloads and merges packaged config)
+        # Sync the Elastic style package (downloads styles and merges packaged config)
         echo "Downloading Elastic style guide..."
         vale --config=.vale.ini.temp sync
         

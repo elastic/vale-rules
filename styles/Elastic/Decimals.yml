@@ -4,7 +4,6 @@ link: https://stunning-adventure-qrvr1k2.pages.github.io/tech-writing-guidelines
 ignorecase: true
 level: suggestion
 nonword: true
-scope: raw
 tokens:
   - '\b\d+,\d{1,2}\b'
   - '(?<![#\w])\d{4,}\b'
