@@ -162,10 +162,7 @@ exceptions:
   - RERANK
   - SAMPLE
   - SORT
-  - STATS
-  - WHERE
   - ABSENT
-  - AVG
   - COUNT
   - COUNT_DISTINCT
   - FIRST
@@ -176,11 +173,9 @@ exceptions:
   - MIN
   - PERCENTILE
   - PRESENT
-  - SAMPLE
   - ST_CENTROID_AGG
   - ST_EXTENT_AGG
   - STD_DEV
-  - SUM
   - TOP
   - VALUES
   - WEIGHTED_AVG
@@ -234,7 +229,6 @@ exceptions:
   - LOG10
   - PI
   - POW
-  - ROUND
   - ROUND_TO
   - SCALB
   - SIGNUM
@@ -244,7 +238,6 @@ exceptions:
   - TAN
   - TANH
   - TAU
-  - KQL
   - MATCH
   - MATCH_PHRASE
   - QSTR
