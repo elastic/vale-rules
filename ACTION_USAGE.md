@@ -2,7 +2,7 @@
 
 This repository provides a reusable GitHub Action that can be used by any Elastic repository to lint documentation files with Vale using the Elastic style guide.
 
-## Quick start
+## Quick Start Linting
 
 Create a workflow file in your repository (e.g., `.github/workflows/vale-lint.yml`):
 
