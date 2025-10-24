@@ -83,7 +83,7 @@ The {{security-app}} contains the following pages that enable analysts to view, 
 
 ### Discover [security-ui-discover]
 
-Use the [Discover](/explore-analyze/discover.md) UI to filter your data or learn about its structure.
+Use the [Discover](/explore-analyze/discover.md) UI's to filter your data or learn about its structure.
 
 
 ### Dashboards [_dashboards]
