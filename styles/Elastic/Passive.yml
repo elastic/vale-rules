@@ -1,5 +1,5 @@
 extends: existence
-link: https://stunning-adventure-qrvr1k2.pages.github.io/tech-writing-guidelines/voice-tone
+link: https://stunning-adventure-qrvr1k2.pages.github.io/style-guide/voice-tone/
 message: "In general, use active voice instead of passive voice ('%s')."
 ignorecase: true
 level: suggestion
