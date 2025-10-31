@@ -41,9 +41,10 @@ All inputs are optional:
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `files` | Files or directories to lint (space-separated). If not provided, lints changed files in PR. | `''` (empty, uses changed files) |
+| `files` | Files or directories to lint. Can be a path, `all`, JSON array, or comma-separated list. See [errata-ai/vale-action](https://github.com/errata-ai/vale-action#files-default-all) for format details. | `all` |
 | `reporter` | Reviewdog reporter type for inline annotations (github-pr-review, github-pr-check, github-check) | `github-pr-review` |
-| `vale_version` | Vale version to install | `latest` |
+| `filter_mode` | Reviewdog filter mode (added, diff_context, file, nofilter) | `added` |
+| `vale_version` | Vale version to use (must be >= 2.16.0) | `latest` |
 
 **Note:** The action always fails if Vale finds errors. Warnings and suggestions do not cause the action to fail, but are reported in the summary and as inline annotations.
 
@@ -82,6 +83,30 @@ All inputs are optional:
     reporter: github-check
 ```
 
+### Different filter modes
+
+```yaml
+# Only show issues on added lines (default)
+- uses: elastic/vale-rules@main
+  with:
+    filter_mode: added
+
+# Show issues on the entire diff context
+- uses: elastic/vale-rules@main
+  with:
+    filter_mode: diff_context
+
+# Show all issues in changed files
+- uses: elastic/vale-rules@main
+  with:
+    filter_mode: file
+
+# Show all issues (no filtering)
+- uses: elastic/vale-rules@main
+  with:
+    filter_mode: nofilter
+```
+
 ## Complete example
 
 ```yaml
@@ -116,30 +141,19 @@ jobs:
           reporter: github-pr-review
 ```
 
-## Supported platforms
-
-The action automatically detects the runner OS and installs Vale accordingly:
-
-- **Ubuntu/Linux**: Uses snap
-- **macOS**: Uses Homebrew
-- **Self-hosted runners**: Ensure Vale is pre-installed or accessible via package manager
-
 ## How it works
 
-1. Detects the operating system
-2. Installs Vale if not already present
-3. Downloads the latest Elastic style guide package from this repository (includes `.vale.ini` configuration and styles)
-4. Vale automatically merges the packaged configuration settings (SkippedScopes, IgnoredScopes, TokenIgnores, etc.)
-5. Identifies files to lint:
-   - **When PR is opened/reopened**: Checks all changed files in the PR
-   - **When new commits are pushed**: Only checks files changed in the new commit (prevents duplicate comments)
-   - **When files specified manually**: Uses the provided files
-6. Runs Vale on the files with the Elastic configuration
-7. Posts results in three ways:
+1. Downloads and extracts the latest Elastic style guide package from this repository (includes `.vale.ini` configuration and styles)
+2. Runs the official [errata-ai/vale-action](https://github.com/errata-ai/vale-action) with the Elastic styles, which:
+   - Installs Vale (if not present)
+   - Runs Vale on specified files
+   - Posts inline annotations via reviewdog (filtered by `filter_mode`)
+   - Fails if errors are found
+3. Generates additional reporting:
    - **GitHub Actions Summary**: Detailed report with issue counts by severity and file
-   - **Inline annotations**: Errors and warnings shown via reviewdog on the relevant lines
-   - **PR comment**: Single summary comment with issue counts and link to full report
-8. Fails the action if any errors are found (warnings and suggestions don't fail the build)
+   - **PR comment**: Single sticky comment with issue counts and link to full report
+
+This approach combines the reliability of the official Vale action (used by 3.5k+ repositories) with Elastic-specific configuration and enhanced reporting.
 
 ## Permissions required
 

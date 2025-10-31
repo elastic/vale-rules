@@ -8,149 +8,59 @@ branding:
 
 inputs:
   files:
-    description: 'Files or directories to lint (space-separated). If not provided, lints changed files in PR.'
+    description: 'Files or directories to lint. See errata-ai/vale-action for format options.'
     required: false
-    default: ''
+    default: 'all'
   reporter:
     description: 'Reviewdog reporter (github-pr-review, github-pr-check, github-check)'
     required: false
     default: 'github-pr-review'
+  filter_mode:
+    description: 'Reviewdog filter mode (added, diff_context, file, nofilter)'
+    required: false
+    default: 'added'
   vale_version:
-    description: 'Vale version to install (default: latest via package manager)'
+    description: 'Vale version to use (must be >= 2.16.0)'
     required: false
     default: 'latest'
 
 runs:
   using: 'composite'
   steps:
-    - name: Detect OS
-      id: detect-os
+    - name: Setup Elastic Vale package
       shell: bash
       run: |
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-          echo "os=macos" >> $GITHUB_OUTPUT
-        elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-          echo "os=linux" >> $GITHUB_OUTPUT
-        else
-          echo "os=unknown" >> $GITHUB_OUTPUT
-        fi
-    
-    - name: Install Vale (macOS)
-      if: steps.detect-os.outputs.os == 'macos'
-      shell: bash
-      run: |
-        if ! command -v vale &> /dev/null; then
-          echo "Installing Vale via Homebrew..."
-          brew install vale
-        else
-          echo "Vale is already installed: $(vale --version)"
-        fi
-    
-    - name: Install Vale (Linux)
-      if: steps.detect-os.outputs.os == 'linux'
-      shell: bash
-      run: |
-        if ! command -v vale &> /dev/null; then
-          echo "Installing Vale via snap..."
-          sudo snap install vale
-        else
-          echo "Vale is already installed: $(vale --version)"
-        fi
-    
-    - name: Configure Vale with Elastic style guide
-      shell: bash
-      run: |
-        # Create a minimal .vale.ini for this run
-        # Vale will download the package and merge its .vale.ini automatically
-        cat > .vale.ini.temp << 'EOF'
-        StylesPath = .vale-styles
+        echo "Downloading Elastic Vale package..."
+        curl -fsSL https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip -o elastic-vale.zip
         
-        Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
-        EOF
+        echo "Extracting package..."
+        unzip -q elastic-vale.zip
         
-        # Sync the Elastic style package (downloads styles and merges packaged config)
-        echo "Downloading Elastic style guide..."
-        vale --config=.vale.ini.temp sync
-        
-        echo "Vale configured with Elastic style guide"
+        echo "✓ Elastic Vale styles ready"
+        ls -la .vale.ini styles/ 2>/dev/null || true
     
-    - name: Get changed files
-      id: changed-files
-      if: inputs.files == ''
-      shell: bash
-      run: |
-        # Only get changed files if running in a PR context
-        if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
-          # For new commits on existing PRs, only diff against the previous commit to avoid duplicate comments
-          if [ "${{ github.event.action }}" = "synchronize" ] && [ -n "${{ github.event.before }}" ]; then
-            echo "Detecting files changed in latest commit..."
-            git diff --name-only ${{ github.event.before }}...${{ github.event.after }} \
-              | grep -E '\.(md|adoc)$' > changed_files.txt || echo "No markdown/adoc files changed"
-          else
-            # For opened/reopened PRs, check all PR changes
-            echo "Detecting changed files in PR..."
-            git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
-              | grep -E '\.(md|adoc)$' > changed_files.txt || echo "No markdown/adoc files changed"
-          fi
-          
-          if [ -s changed_files.txt ]; then
-            echo "Found changed files:"
-            cat changed_files.txt
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "No markdown or adoc files changed"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          fi
-        else
-          echo "Not running in PR context, no files to check"
-          echo "has_changes=false" >> $GITHUB_OUTPUT
-        fi
-    
-    - name: Determine files to lint
-      id: files-to-lint
-      shell: bash
-      run: |
-        if [ -n "${{ inputs.files }}" ]; then
-          echo "Using provided files: ${{ inputs.files }}"
-          echo "${{ inputs.files }}" | tr ' ' '\n' > files_to_lint.txt
-          echo "has_files=true" >> $GITHUB_OUTPUT
-        elif [ "${{ steps.changed-files.outputs.has_changes }}" == "true" ]; then
-          echo "Using changed files from PR"
-          cp changed_files.txt files_to_lint.txt
-          echo "has_files=true" >> $GITHUB_OUTPUT
-        else
-          echo "No files to lint"
-          echo "has_files=false" >> $GITHUB_OUTPUT
-        fi
-    
-    - name: Install reviewdog
-      if: steps.files-to-lint.outputs.has_files == 'true'
-      uses: reviewdog/action-setup@v1
+    - name: Run Vale linting
+      id: vale-lint
+      uses: errata-ai/vale-action@v2.1.1
       with:
-        reviewdog_version: latest
+        files: ${{ inputs.files }}
+        reporter: ${{ inputs.reporter }}
+        filter_mode: ${{ inputs.filter_mode }}
+        fail_on_error: true
+        version: ${{ inputs.vale_version }}
     
-    - name: Run Vale and generate reports
-      id: vale-run
-      if: steps.files-to-lint.outputs.has_files == 'true'
+    - name: Generate summary and PR comment
+      if: always()
+      id: vale-summary
       shell: bash
-      env:
-        REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
       run: |
-        echo "Running Vale on files..."
-        
-        # Run Vale with JSON output for parsing
-        echo "{}" > vale_output.json
-        while IFS= read -r file; do
-          if [ -f "$file" ]; then
-            echo "Linting: $file"
-            vale --config=.vale.ini.temp --output=JSON "$file" 2>&1 >> vale_output.json || true
-          fi
-        done < files_to_lint.txt
+        # Run Vale with JSON output for summary
+        vale --output=JSON ${{ inputs.files }} > vale_results.json 2>&1 || true
         
         # Parse results and count by severity
-        ERROR_COUNT=$(jq -r '[.. | objects | select(.Severity == "error")] | length' vale_output.json 2>/dev/null || echo "0")
-        WARNING_COUNT=$(jq -r '[.. | objects | select(.Severity == "warning")] | length' vale_output.json 2>/dev/null || echo "0")
-        SUGGESTION_COUNT=$(jq -r '[.. | objects | select(.Severity == "suggestion")] | length' vale_output.json 2>/dev/null || echo "0")
+        ERROR_COUNT=$(jq -r '[.. | objects | select(.Severity == "error")] | length' vale_results.json 2>/dev/null || echo "0")
+        WARNING_COUNT=$(jq -r '[.. | objects | select(.Severity == "warning")] | length' vale_results.json 2>/dev/null || echo "0")
+        SUGGESTION_COUNT=$(jq -r '[.. | objects | select(.Severity == "suggestion")] | length' vale_results.json 2>/dev/null || echo "0")
         TOTAL_COUNT=$((ERROR_COUNT + WARNING_COUNT + SUGGESTION_COUNT))
         
         echo "error_count=$ERROR_COUNT" >> $GITHUB_OUTPUT
@@ -179,68 +89,61 @@ runs:
           echo "### Issues by File" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          jq -r 'to_entries | .[] | "\n#### \(.key)\n\n| Line | Severity | Message |\n|------|----------|----------|\n" + (.value | map("| \(.Line) | \(.Severity) | \(.Message) |") | join("\n"))' vale_output.json >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "See logs for detailed output" >> $GITHUB_STEP_SUMMARY
+          jq -r 'to_entries | .[] | "\n#### \(.key)\n\n| Line | Severity | Message |\n|------|----------|----------|\n" + (.value | map("| \(.Line) | \(.Severity) | \(.Message) |") | join("\n"))' vale_results.json >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "See logs for detailed output" >> $GITHUB_STEP_SUMMARY
         fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "---" >> $GITHUB_STEP_SUMMARY
-        echo "*View inline annotations below for error and warning locations.*" >> $GITHUB_STEP_SUMMARY
+        echo "*View inline annotations above for issue locations.*" >> $GITHUB_STEP_SUMMARY
         
-        # Run Vale again with line output for reviewdog (inline annotations)
-        while IFS= read -r file; do
-          if [ -f "$file" ]; then
-            vale --config=.vale.ini.temp --output=line "$file" 2>&1 || true
-          fi
-        done < files_to_lint.txt > vale_output.txt
-        
-        # Send to reviewdog for inline annotations
-        if [ -s vale_output.txt ]; then
-          echo "Posting inline annotations via reviewdog..."
-          cat vale_output.txt | \
-          reviewdog -efm="%f:%l:%c:%m" \
-            -name="Elastic Vale" \
-            -reporter="${{ inputs.reporter }}" \
-            -filter-mode="nofilter" \
-            -fail-on-error="false"
-        fi
-        
-        # Fail if there are errors
-        if [ "$ERROR_COUNT" -gt 0 ]; then
-          echo "❌ Vale found $ERROR_COUNT error(s). Please fix them before merging."
-          exit 1
-        elif [ "$TOTAL_COUNT" -gt 0 ]; then
-          echo "⚠️  Vale found $WARNING_COUNT warning(s) and $SUGGESTION_COUNT suggestion(s)."
+        # Generate PR comment message
+        if [ "$TOTAL_COUNT" -eq 0 ]; then
+          PR_MESSAGE="## 📝 Vale Linting Results
+
+✅ **No issues found!** Your documentation looks great."
         else
-          echo "✅ No issues found!"
+          PR_MESSAGE="## 📝 Vale Linting Results
+
+| Severity | Count |
+|----------|-------|
+| 🔴 Errors | $ERROR_COUNT |
+| 🟡 Warnings | $WARNING_COUNT |
+| 💡 Suggestions | $SUGGESTION_COUNT |
+| **Total** | **$TOTAL_COUNT** |"
+          
+          if [ "$ERROR_COUNT" -gt 0 ]; then
+            PR_MESSAGE="${PR_MESSAGE}
+
+❌ **Action failed due to errors.** Please fix the errors before merging."
+          else
+            PR_MESSAGE="${PR_MESSAGE}
+
+⚠️ Please review the warnings and suggestions."
+          fi
+          
+          PR_MESSAGE="${PR_MESSAGE}
+
+[View detailed report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
         fi
+        
+        # Save PR message to output
+        {
+          echo 'pr_comment<<EOF'
+          echo "$PR_MESSAGE"
+          echo 'EOF'
+        } >> $GITHUB_OUTPUT
     
     - name: Post PR summary comment
-      if: github.event.pull_request && steps.files-to-lint.outputs.has_files == 'true'
+      if: always() && github.event.pull_request
       uses: marocchino/sticky-pull-request-comment@v2
       with:
         header: vale-lint-summary
-        message: |
-          ## 📝 Vale Linting Results
-          
-          ${{ steps.vale-run.outputs.total_count == '0' && '✅ **No issues found!** Your documentation looks great.' || format('| Severity | Count |
-          |----------|-------|
-          | 🔴 Errors | {0} |
-          | 🟡 Warnings | {1} |
-          | 💡 Suggestions | {2} |
-          | **Total** | **{3}** |
-          
-          {4}
-          
-          [View detailed report and inline annotations](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})', steps.vale-run.outputs.error_count, steps.vale-run.outputs.warning_count, steps.vale-run.outputs.suggestion_count, steps.vale-run.outputs.total_count, steps.vale-run.outputs.error_count > '0' && '❌ **Action failed due to errors.** Please fix the errors before merging.' || '⚠️ Please review the warnings and suggestions.') }}
+        message: ${{ steps.vale-summary.outputs.pr_comment }}
     
     - name: Cleanup
       if: always()
       shell: bash
       run: |
-        rm -f .vale.ini.temp
-        rm -f changed_files.txt
-        rm -f files_to_lint.txt
-        rm -f vale_output.txt
-        rm -f vale_output.json
-        rm -rf .vale-styles
+        rm -f elastic-vale.zip
+        rm -f vale_results.json
 
