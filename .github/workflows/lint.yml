@@ -24,6 +24,3 @@ jobs:
       
       - name: Run Elastic Vale Linter
         uses: ./
-        with:
-          reporter: github-pr-review
-          filter_mode: added

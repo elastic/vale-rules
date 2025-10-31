@@ -12,17 +12,9 @@ inputs:
     required: false
     default: ''
   fail_on_error:
-    description: 'Fail the action if Vale finds errors'
+    description: 'Fail the action if Vale finds error-level issues'
     required: false
     default: 'false'
-  reporter:
-    description: 'Reviewdog reporter (github-pr-review, github-pr-check, github-check)'
-    required: false
-    default: 'github-pr-review'
-  filter_mode:
-    description: 'Reviewdog filter mode (added, diff_context, file, nofilter)'
-    required: false
-    default: 'added'
   vale_version:
     description: 'Vale version to install (default: latest via package manager)'
     required: false
@@ -123,43 +115,200 @@ runs:
           echo "has_files=false" >> $GITHUB_OUTPUT
         fi
     
-    - name: Install reviewdog
-      if: steps.files-to-lint.outputs.has_files == 'true'
-      uses: reviewdog/action-setup@v1
-      with:
-        reviewdog_version: latest
+    - name: Get modified line ranges
+      id: modified-lines
+      if: steps.files-to-lint.outputs.has_files == 'true' && github.event.pull_request.base.sha != ''
+      shell: bash
+      run: |
+        echo "Getting modified line ranges for each file..."
+        
+        # Create a file to store line ranges: filename|start_line|line_count
+        > line_ranges.txt
+        
+        while IFS= read -r file; do
+          if [ -f "$file" ]; then
+            # Get line ranges from git diff
+            git diff -U0 ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} "$file" \
+              | grep '^@@' | while read -r line; do
+                # Extract start line and count from @@ -x,y +a,b @@
+                range=$(echo "$line" | sed -n 's/^@@ -[0-9,]* +\([0-9]*\),*\([0-9]*\).*/\1 \2/p')
+                start=$(echo "$range" | awk '{print $1}')
+                count=$(echo "$range" | awk '{print $2}')
+                
+                # If count is empty, it means only 1 line was changed
+                if [ -z "$count" ]; then
+                  count=1
+                fi
+                
+                echo "$file|$start|$count" >> line_ranges.txt
+              done
+          fi
+        done < files_to_lint.txt
+        
+        if [ -s line_ranges.txt ]; then
+          echo "Modified line ranges:"
+          cat line_ranges.txt
+        fi
     
-    - name: Run Vale with reviewdog
+    - name: Run Vale and generate report
+      id: vale-report
       if: steps.files-to-lint.outputs.has_files == 'true'
       shell: bash
-      env:
-        REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
       run: |
         echo "Running Vale on files..."
         
-        # Run Vale on each file
-        while IFS= read -r file; do
-          if [ -f "$file" ]; then
-            echo "Linting: $file"
-            vale --config=.vale.ini.temp --output=line "$file" 2>&1 || true
-          fi
-        done < files_to_lint.txt > vale_output.txt
+        # Run Vale with JSON output on all files
+        vale --config=.vale.ini.temp --output=JSON $(cat files_to_lint.txt | tr '\n' ' ') > vale_output.json 2>&1 || true
         
-        # Show output
-        if [ -s vale_output.txt ]; then
-          echo "Vale found the following issues:"
-          cat vale_output.txt
-          
-          # Send to reviewdog
-          cat vale_output.txt | \
-          reviewdog -efm="%f:%l:%c:%m" \
-            -name="Elastic Vale" \
-            -reporter="${{ inputs.reporter }}" \
-            -filter-mode="${{ inputs.filter_mode }}" \
-            -fail-on-error="${{ inputs.fail_on_error }}"
-        else
-          echo "✓ No Vale issues found"
+        # Check if vale_output.json exists and is valid JSON
+        if [ ! -f vale_output.json ] || ! jq empty vale_output.json 2>/dev/null; then
+          echo "No issues found or Vale produced no output"
+          echo "has_issues=false" >> $GITHUB_OUTPUT
+          echo "{}" > vale_output.json
+          exit 0
         fi
+        
+        # Parse JSON and filter to modified lines only
+        python3 << 'PYTHON_SCRIPT'
+        import json
+        import sys
+        import os
+        
+        # Load Vale output
+        with open('vale_output.json', 'r') as f:
+          vale_data = json.load(f)
+        
+        # Load modified line ranges
+        modified_ranges = {}
+        if os.path.exists('line_ranges.txt') and os.path.getsize('line_ranges.txt') > 0:
+          with open('line_ranges.txt', 'r') as f:
+            for line in f:
+              parts = line.strip().split('|')
+              if len(parts) == 3:
+                file, start, count = parts
+                if file not in modified_ranges:
+                  modified_ranges[file] = []
+                start_line = int(start)
+                end_line = start_line + int(count)
+                modified_ranges[file].append((start_line, end_line))
+        
+        # Filter issues to modified lines only
+        filtered_issues = {'error': [], 'warning': [], 'suggestion': []}
+        
+        for file, issues in vale_data.items():
+          for issue in issues:
+            line_num = issue.get('Line', 0)
+            
+            # If we have modified ranges, check if this line is modified
+            if modified_ranges:
+              if file in modified_ranges:
+                is_modified = any(start <= line_num < end for start, end in modified_ranges[file])
+                if not is_modified:
+                  continue
+              else:
+                # File not in modified ranges, skip
+                continue
+            
+            # Categorize by severity
+            severity = issue.get('Severity', 'suggestion').lower()
+            if severity not in filtered_issues:
+              severity = 'suggestion'
+            
+            filtered_issues[severity].append({
+              'file': file,
+              'line': line_num,
+              'rule': issue.get('Check', 'Unknown'),
+              'message': issue.get('Message', '')
+            })
+        
+        # Generate markdown report
+        error_count = len(filtered_issues['error'])
+        warning_count = len(filtered_issues['warning'])
+        suggestion_count = len(filtered_issues['suggestion'])
+        total_count = error_count + warning_count + suggestion_count
+        
+        if total_count == 0:
+          print("No issues found on modified lines")
+          with open('vale_report.md', 'w') as f:
+            f.write("## ✅ Vale Linting Results\n\n**No issues found on modified lines!**\n")
+          sys.exit(0)
+        
+        # Build summary
+        summary_parts = []
+        if error_count > 0:
+          summary_parts.append(f"{error_count} error{'s' if error_count != 1 else ''}")
+        if warning_count > 0:
+          summary_parts.append(f"{warning_count} warning{'s' if warning_count != 1 else ''}")
+        if suggestion_count > 0:
+          summary_parts.append(f"{suggestion_count} suggestion{'s' if suggestion_count != 1 else ''}")
+        
+        summary = ", ".join(summary_parts)
+        
+        report = f"## Vale Linting Results\n\n**Summary:** {summary} found\n\n"
+        
+        # Add sections for each severity
+        if error_count > 0:
+          report += f"<details>\n<summary>❌ Errors ({error_count})</summary>\n\n"
+          report += "| File | Line | Rule | Message |\n"
+          report += "|------|------|------|----------|\n"
+          for issue in filtered_issues['error']:
+            report += f"| {issue['file']} | {issue['line']} | {issue['rule']} | {issue['message']} |\n"
+          report += "\n</details>\n\n"
+        
+        if warning_count > 0:
+          report += f"<details>\n<summary>⚠️ Warnings ({warning_count})</summary>\n\n"
+          report += "| File | Line | Rule | Message |\n"
+          report += "|------|------|------|----------|\n"
+          for issue in filtered_issues['warning']:
+            report += f"| {issue['file']} | {issue['line']} | {issue['rule']} | {issue['message']} |\n"
+          report += "\n</details>\n\n"
+        
+        if suggestion_count > 0:
+          report += f"<details>\n<summary>💡 Suggestions ({suggestion_count})</summary>\n\n"
+          report += "| File | Line | Rule | Message |\n"
+          report += "|------|------|------|----------|\n"
+          for issue in filtered_issues['suggestion']:
+            report += f"| {issue['file']} | {issue['line']} | {issue['rule']} | {issue['message']} |\n"
+          report += "\n</details>\n\n"
+        
+        # Write report
+        with open('vale_report.md', 'w') as f:
+          f.write(report)
+        
+        # Write counts for next steps
+        with open('issue_counts.txt', 'w') as f:
+          f.write(f"errors={error_count}\n")
+          f.write(f"warnings={warning_count}\n")
+          f.write(f"suggestions={suggestion_count}\n")
+        
+        print(f"Generated report with {total_count} issues")
+        PYTHON_SCRIPT
+        
+        # Set outputs
+        if [ -f issue_counts.txt ]; then
+          source issue_counts.txt
+          echo "has_issues=true" >> $GITHUB_OUTPUT
+          echo "error_count=$errors" >> $GITHUB_OUTPUT
+          echo "warning_count=$warnings" >> $GITHUB_OUTPUT
+          echo "suggestion_count=$suggestions" >> $GITHUB_OUTPUT
+        else
+          echo "has_issues=false" >> $GITHUB_OUTPUT
+          echo "error_count=0" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Post sticky comment
+      if: steps.vale-report.outputs.has_issues == 'true' || steps.vale-report.outputs.has_issues == 'false'
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        header: elastic-vale-results
+        path: vale_report.md
+    
+    - name: Fail on errors
+      if: inputs.fail_on_error == 'true' && steps.vale-report.outputs.error_count != '0'
+      shell: bash
+      run: |
+        echo "❌ Vale found ${{ steps.vale-report.outputs.error_count }} error-level issue(s)"
+        exit 1
     
     - name: Cleanup
       if: always()
@@ -168,6 +317,9 @@ runs:
         rm -f .vale.ini.temp
         rm -f changed_files.txt
         rm -f files_to_lint.txt
-        rm -f vale_output.txt
+        rm -f vale_output.json
+        rm -f line_ranges.txt
+        rm -f vale_report.md
+        rm -f issue_counts.txt
         rm -rf .vale-styles
 
