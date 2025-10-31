@@ -97,39 +97,32 @@ runs:
         echo "*View inline annotations above for issue locations.*" >> $GITHUB_STEP_SUMMARY
         
         # Generate PR comment message and save to output
+        echo 'pr_comment<<ENDOFCOMMENT' >> $GITHUB_OUTPUT
+        echo "## 📝 Vale Linting Results" >> $GITHUB_OUTPUT
+        echo "" >> $GITHUB_OUTPUT
+        
         if [ "$TOTAL_COUNT" -eq 0 ]; then
-          cat >> $GITHUB_OUTPUT << 'EOF'
-pr_comment<<COMMENT
-## 📝 Vale Linting Results
-
-✅ **No issues found!** Your documentation looks great.
-COMMENT
-EOF
+          echo "✅ **No issues found!** Your documentation looks great." >> $GITHUB_OUTPUT
         else
-          # Determine status message
+          echo "| Severity | Count |" >> $GITHUB_OUTPUT
+          echo "|----------|-------|" >> $GITHUB_OUTPUT
+          echo "| 🔴 Errors | $ERROR_COUNT |" >> $GITHUB_OUTPUT
+          echo "| 🟡 Warnings | $WARNING_COUNT |" >> $GITHUB_OUTPUT
+          echo "| 💡 Suggestions | $SUGGESTION_COUNT |" >> $GITHUB_OUTPUT
+          echo "| **Total** | **$TOTAL_COUNT** |" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          
           if [ "$ERROR_COUNT" -gt 0 ]; then
-            STATUS_MSG="❌ **Action failed due to errors.** Please fix the errors before merging."
+            echo "❌ **Action failed due to errors.** Please fix the errors before merging." >> $GITHUB_OUTPUT
           else
-            STATUS_MSG="⚠️ Please review the warnings and suggestions."
+            echo "⚠️ Please review the warnings and suggestions." >> $GITHUB_OUTPUT
           fi
           
-          cat >> $GITHUB_OUTPUT << EOF
-pr_comment<<COMMENT
-## 📝 Vale Linting Results
-
-| Severity | Count |
-|----------|-------|
-| 🔴 Errors | $ERROR_COUNT |
-| 🟡 Warnings | $WARNING_COUNT |
-| 💡 Suggestions | $SUGGESTION_COUNT |
-| **Total** | **$TOTAL_COUNT** |
-
-$STATUS_MSG
-
-[View detailed report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-COMMENT
-EOF
+          echo "" >> $GITHUB_OUTPUT
+          echo "[View detailed report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_OUTPUT
         fi
+        
+        echo 'ENDOFCOMMENT' >> $GITHUB_OUTPUT
     
     - name: Post PR summary comment
       if: always() && github.event.pull_request
