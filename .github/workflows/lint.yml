@@ -24,3 +24,5 @@ jobs:
       
       - name: Run Elastic Vale Linter
         uses: ./
+        with:
+          fail_on_error: true
