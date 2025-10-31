@@ -1,6 +1,6 @@
 [Vale](https://github.com/errata-ai/vale) is an open source prose linter that can check the content of documents in several formats against style guide rules. The goal of a prose linter is automating style guide checks in docs-as-code environments, so that style issues are detected before deploy or while editing documentation in a code editor. 
 
-This repo contains a set of linting rules for Vale based on the Elastic style guide and recommendations.
+This repo contains a set of linting rules for Vale based on the Elastic style guide and recommendations. The GitHub Action provides comprehensive reporting with inline annotations, a detailed summary in the Actions tab, and a single PR comment with issue counts.
 
 ## Get started
 
@@ -30,8 +30,6 @@ jobs:
           fetch-depth: 0
       
       - uses: elastic/vale-rules@main
-        with:
-          reporter: github-pr-review
 ```
 
 Refer to [ACTION_USAGE.md](ACTION_USAGE.md) for detailed documentation and examples.

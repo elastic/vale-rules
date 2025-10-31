@@ -2,7 +2,7 @@
 
 This repository provides a reusable GitHub Action that can be used by any Elastic repository to lint documentation files with Vale using the Elastic style guide.
 
-## Quick Start Linting
+## Quick start linting
 
 Create a workflow file in your repository (e.g., `.github/workflows/vale-lint.yml`):
 
@@ -42,10 +42,10 @@ All inputs are optional:
 | Input | Description | Default |
 |-------|-------------|---------|
 | `files` | Files or directories to lint (space-separated). If not provided, lints changed files in PR. | `''` (empty, uses changed files) |
-| `fail_on_error` | Fail the action if Vale finds errors | `false` |
-| `reporter` | Reviewdog reporter type | `github-pr-review` |
-| `filter_mode` | Reviewdog filter mode | `added` |
+| `reporter` | Reviewdog reporter type for inline annotations (github-pr-review, github-pr-check, github-check) | `github-pr-review` |
 | `vale_version` | Vale version to install | `latest` |
+
+**Note:** The action always fails if Vale finds errors. Warnings and suggestions do not cause the action to fail, but are reported in the summary and as inline annotations.
 
 ## Examples
 
@@ -63,15 +63,7 @@ All inputs are optional:
     files: 'docs/ README.md'
 ```
 
-### Fail on errors
-
-```yaml
-- uses: elastic/vale-rules@main
-  with:
-    fail_on_error: true
-```
-
-### Use different reviewdog reporter
+### Use different reviewdog reporter for inline annotations
 
 ```yaml
 # For inline PR comments
@@ -88,30 +80,6 @@ All inputs are optional:
 - uses: elastic/vale-rules@main
   with:
     reporter: github-check
-```
-
-### Different filter modes
-
-```yaml
-# Only show issues on added lines (default)
-- uses: elastic/vale-rules@main
-  with:
-    filter_mode: added
-
-# Show issues on the entire diff context
-- uses: elastic/vale-rules@main
-  with:
-    filter_mode: diff_context
-
-# Show all issues in changed files
-- uses: elastic/vale-rules@main
-  with:
-    filter_mode: file
-
-# Show all issues (no filtering)
-- uses: elastic/vale-rules@main
-  with:
-    filter_mode: nofilter
 ```
 
 ## Complete example
@@ -146,8 +114,6 @@ jobs:
         uses: elastic/vale-rules@main
         with:
           reporter: github-pr-review
-          filter_mode: added
-          fail_on_error: false
 ```
 
 ## Supported platforms
@@ -164,9 +130,16 @@ The action automatically detects the runner OS and installs Vale accordingly:
 2. Installs Vale if not already present
 3. Downloads the latest Elastic style guide package from this repository (includes `.vale.ini` configuration and styles)
 4. Vale automatically merges the packaged configuration settings (SkippedScopes, IgnoredScopes, TokenIgnores, etc.)
-5. Identifies files to lint (changed files in PR or specified files)
+5. Identifies files to lint:
+   - **When PR is opened/reopened**: Checks all changed files in the PR
+   - **When new commits are pushed**: Only checks files changed in the new commit (prevents duplicate comments)
+   - **When files specified manually**: Uses the provided files
 6. Runs Vale on the files with the Elastic configuration
-7. Posts results as PR comments or check annotations via reviewdog
+7. Posts results in three ways:
+   - **GitHub Actions Summary**: Detailed report with issue counts by severity and file
+   - **Inline annotations**: Errors and warnings shown via reviewdog on the relevant lines
+   - **PR comment**: Single summary comment with issue counts and link to full report
+8. Fails the action if any errors are found (warnings and suggestions don't fail the build)
 
 ## Permissions required
 
@@ -175,17 +148,19 @@ The action requires the following permissions:
 ```yaml
 permissions:
   contents: read           # To checkout code
-  pull-requests: write     # To post PR comments (for github-pr-review reporter)
+  pull-requests: write     # To post summary comment and inline annotations
   checks: write            # To create check runs (for github-pr-check reporter)
 ```
 
+**Note:** The `pull-requests: write` permission is required for posting the summary comment on PRs and for inline annotations via reviewdog.
+
 ## Troubleshooting
 
-### No comments appearing on PR
+### No summary comment or annotations appearing on PR
 
 1. Ensure `pull-requests: write` permission is set
 2. Check that files were actually changed in the PR
-3. Try using `filter_mode: file` to see all issues in changed files
+3. Check the Actions Summary tab for the detailed report
 
 ### Action fails to install Vale
 
@@ -194,9 +169,27 @@ permissions:
 
 ### Vale finds no issues but you expect some
 
-1. Verify the files match the patterns in your `.vale.ini` (`.md`, `.adoc`)
+1. Verify the files match the patterns (`.md`, `.adoc`)
 2. Check that the files are included in the `files` input or are part of the PR diff
-3. Use `filter_mode: nofilter` to see all issues
+3. If you pushed a new commit, the action only checks files changed in that commit (not all PR changes)
+4. Check the Actions Summary for the full report
+
+### Action failed due to errors
+
+This is expected behavior. The action fails when Vale finds errors (not warnings or suggestions). To resolve:
+
+1. Review the inline annotations on the PR
+2. Check the summary comment for error counts
+3. Fix the errors and push a new commit
+4. The action will re-run and pass if no errors remain
+
+### Summary comment is not updating on new commits
+
+The action uses a "sticky" comment that updates in place. If you don't see updates:
+
+1. Check that the PR comment exists (look for "Vale Linting Results")
+2. The comment updates automatically on each run
+3. If missing, ensure `pull-requests: write` permission is set
 
 ## Version pinning
 
