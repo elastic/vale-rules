@@ -184,7 +184,7 @@ def generate_markdown_report(
         report += "|------|------|------|----------|\n"
         for issue in filtered_issues['suggestion']:
             line_link = format_line_link(issue['file'], issue['line'], github_repo, pr_number)
-            report += f"| {issue['file']} | {issue['line']} | {issue['rule']} | {issue['message']} |\n"
+            report += f"| {issue['file']} | {line_link} | {issue['rule']} | {issue['message']} |\n"
         report += "\n</details>\n\n"
     
     # Write report
