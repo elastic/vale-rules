@@ -105,11 +105,13 @@ def generate_github_annotations(filtered_issues: Dict[str, List[Dict]]) -> None:
 def generate_diff_hash(file_path: str) -> str:
     """
     Generate a GitHub-style diff hash for file anchors.
-    GitHub uses a hash based on the file path for diff anchors.
+    GitHub generates diff anchor IDs by hashing the file path.
+    The exact algorithm appears to be SHA256 of the normalized file path.
     """
-    # GitHub uses SHA256 of "a/{path}" and "b/{path}" combined
-    hash_input = f"diff --git a/{file_path} b/{file_path}"
-    return hashlib.sha256(hash_input.encode('utf-8')).hexdigest()
+    # Normalize the path (remove leading ./ if present)
+    normalized_path = file_path.lstrip('./')
+    # GitHub's diff hash is SHA256 of the file path
+    return hashlib.sha256(normalized_path.encode('utf-8')).hexdigest()
 
 
 def format_line_link(
