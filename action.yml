@@ -19,10 +19,35 @@ inputs:
     description: 'Vale version to install (default: latest via package manager)'
     required: false
     default: 'latest'
+  debug:
+    description: 'Enable debug output'
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
   steps:
+    - name: Validate dependencies
+      shell: bash
+      run: |
+        # Check required tools
+        if ! command -v jq &> /dev/null; then
+          echo "::error::jq is not installed. Please install jq on your runner."
+          exit 1
+        fi
+        
+        if ! command -v python3 &> /dev/null; then
+          echo "::error::python3 is not installed. Please install Python 3 on your runner."
+          exit 1
+        fi
+        
+        if ! command -v git &> /dev/null; then
+          echo "::error::git is not installed. Please install git on your runner."
+          exit 1
+        fi
+        
+        echo "✓ All dependencies are available"
+    
     - name: Detect OS
       id: detect-os
       shell: bash
@@ -115,15 +140,31 @@ runs:
           echo "has_files=false" >> $GITHUB_OUTPUT
         fi
     
+    - name: Setup temp directory
+      id: setup-temp
+      if: steps.files-to-lint.outputs.has_files == 'true'
+      shell: bash
+      run: |
+        # Create temp directory for Vale operation
+        TEMP_DIR=$(mktemp -d -t vale-lint-XXXXXX)
+        echo "temp_dir=$TEMP_DIR" >> $GITHUB_OUTPUT
+        echo "Created temp directory: $TEMP_DIR"
+        
+        if [ "${{ inputs.debug }}" == "true" ]; then
+          echo "::debug::Temp directory created at $TEMP_DIR"
+        fi
+    
     - name: Get modified line ranges
       id: modified-lines
       if: steps.files-to-lint.outputs.has_files == 'true' && github.event.pull_request.base.sha != ''
       shell: bash
+      env:
+        TEMP_DIR: ${{ steps.setup-temp.outputs.temp_dir }}
       run: |
         echo "Getting modified line ranges for each file..."
         
         # Create a file to store line ranges: filename|start_line|line_count
-        > line_ranges.txt
+        > "$TEMP_DIR/line_ranges.txt"
         
         while IFS= read -r file; do
           if [ -f "$file" ]; then
@@ -140,14 +181,17 @@ runs:
                   count=1
                 fi
                 
-                echo "$file|$start|$count" >> line_ranges.txt
+                echo "$file|$start|$count" >> "$TEMP_DIR/line_ranges.txt"
               done
           fi
         done < files_to_lint.txt
         
-        if [ -s line_ranges.txt ]; then
+        if [ -s "$TEMP_DIR/line_ranges.txt" ]; then
           echo "Modified line ranges:"
-          cat line_ranges.txt
+          cat "$TEMP_DIR/line_ranges.txt"
+          
+          # Copy to workspace for Python script
+          cp "$TEMP_DIR/line_ranges.txt" line_ranges.txt
         fi
     
     - name: Run Vale and generate report
@@ -156,173 +200,59 @@ runs:
       shell: bash
       env:
         GITHUB_REPOSITORY: ${{ github.repository }}
-        GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        DEBUG: ${{ inputs.debug }}
       run: |
+        if [ "${{ inputs.debug }}" == "true" ]; then
+          echo "::debug::Running Vale with debug mode enabled"
+          set -x
+        fi
+        
         echo "Running Vale on files..."
         
         # Run Vale with JSON output on all files
-        vale --config=.vale.ini.temp --output=JSON $(cat files_to_lint.txt | tr '\n' ' ') > vale_output.json 2>&1 || true
+        if ! vale --config=.vale.ini.temp --output=JSON $(cat files_to_lint.txt | tr '\n' ' ') > vale_output.json 2>&1; then
+          # Vale exited with error, but might have found issues
+          if [ "${{ inputs.debug }}" == "true" ]; then
+            echo "::debug::Vale exited with non-zero code, checking output"
+          fi
+        fi
         
         # Check if vale_output.json exists and is valid JSON
         if [ ! -f vale_output.json ] || ! jq empty vale_output.json 2>/dev/null; then
           echo "No issues found or Vale produced no output"
           echo "has_issues=false" >> $GITHUB_OUTPUT
-          echo "{}" > vale_output.json
+          echo "error_count=0" >> $GITHUB_OUTPUT
+          
+          # Create clean report
+          echo "## ✅ Vale Linting Results" > vale_report.md
+          echo "" >> vale_report.md
+          echo "**No issues found on modified lines!**" >> vale_report.md
           exit 0
         fi
         
-        # Parse JSON and filter to modified lines only
-        python3 << 'PYTHON_SCRIPT'
-        import json
-        import sys
-        import os
+        # Run the Python reporter script
+        python3 ${{ github.action_path }}/scripts/vale_reporter.py
         
-        # Get GitHub context for building links
-        github_repo = os.environ.get('GITHUB_REPOSITORY', '')
-        github_sha = os.environ.get('GITHUB_SHA', '')
-        
-        # Load Vale output
-        with open('vale_output.json', 'r') as f:
-          vale_data = json.load(f)
-        
-        # Load modified line ranges
-        modified_ranges = {}
-        if os.path.exists('line_ranges.txt') and os.path.getsize('line_ranges.txt') > 0:
-          with open('line_ranges.txt', 'r') as f:
-            for line in f:
-              parts = line.strip().split('|')
-              if len(parts) == 3:
-                file, start, count = parts
-                if file not in modified_ranges:
-                  modified_ranges[file] = []
-                start_line = int(start)
-                end_line = start_line + int(count)
-                modified_ranges[file].append((start_line, end_line))
-        
-        # Filter issues to modified lines only
-        filtered_issues = {'error': [], 'warning': [], 'suggestion': []}
-        
-        for file, issues in vale_data.items():
-          for issue in issues:
-            line_num = issue.get('Line', 0)
-            
-            # If we have modified ranges, check if this line is modified
-            if modified_ranges:
-              if file in modified_ranges:
-                is_modified = any(start <= line_num < end for start, end in modified_ranges[file])
-                if not is_modified:
-                  continue
-              else:
-                # File not in modified ranges, skip
-                continue
-            
-            # Categorize by severity
-            severity = issue.get('Severity', 'suggestion').lower()
-            if severity not in filtered_issues:
-              severity = 'suggestion'
-            
-            filtered_issues[severity].append({
-              'file': file,
-              'line': line_num,
-              'rule': issue.get('Check', 'Unknown'),
-              'message': issue.get('Message', '')
-            })
-        
-        # Output GitHub Actions annotations for inline diff view
-        for severity, issues in filtered_issues.items():
-          for issue in issues:
-            # Map Vale severity to GitHub annotation level
-            if severity == 'error':
-              annotation_level = 'error'
-            elif severity == 'warning':
-              annotation_level = 'warning'
-            else:
-              annotation_level = 'notice'
-            
-            # Output GitHub Actions annotation
-            print(f"::{annotation_level} file={issue['file']},line={issue['line']}::{issue['rule']}: {issue['message']}")
-        
-        # Generate markdown report
-        error_count = len(filtered_issues['error'])
-        warning_count = len(filtered_issues['warning'])
-        suggestion_count = len(filtered_issues['suggestion'])
-        total_count = error_count + warning_count + suggestion_count
-        
-        if total_count == 0:
-          print("No issues found on modified lines")
-          with open('vale_report.md', 'w') as f:
-            f.write("## ✅ Vale Linting Results\n\n**No issues found on modified lines!**\n")
-          sys.exit(0)
-        
-        # Build summary
-        summary_parts = []
-        if error_count > 0:
-          summary_parts.append(f"{error_count} error{'s' if error_count != 1 else ''}")
-        if warning_count > 0:
-          summary_parts.append(f"{warning_count} warning{'s' if warning_count != 1 else ''}")
-        if suggestion_count > 0:
-          summary_parts.append(f"{suggestion_count} suggestion{'s' if suggestion_count != 1 else ''}")
-        
-        summary = ", ".join(summary_parts)
-        
-        # Helper function to create GitHub line links
-        def format_line_link(file_path, line_num):
-          if github_repo and github_sha:
-            url = f"https://github.com/{github_repo}/blob/{github_sha}/{file_path}#L{line_num}"
-            return f"[{line_num}]({url})"
-          return str(line_num)
-        
-        report = f"## Vale Linting Results\n\n**Summary:** {summary} found\n\n"
-        
-        # Add sections for each severity
-        if error_count > 0:
-          report += f"<details>\n<summary>❌ Errors ({error_count})</summary>\n\n"
-          report += "| File | Line | Rule | Message |\n"
-          report += "|------|------|------|----------|\n"
-          for issue in filtered_issues['error']:
-            line_link = format_line_link(issue['file'], issue['line'])
-            report += f"| {issue['file']} | {line_link} | {issue['rule']} | {issue['message']} |\n"
-          report += "\n</details>\n\n"
-        
-        if warning_count > 0:
-          report += f"<details>\n<summary>⚠️ Warnings ({warning_count})</summary>\n\n"
-          report += "| File | Line | Rule | Message |\n"
-          report += "|------|------|------|----------|\n"
-          for issue in filtered_issues['warning']:
-            line_link = format_line_link(issue['file'], issue['line'])
-            report += f"| {issue['file']} | {line_link} | {issue['rule']} | {issue['message']} |\n"
-          report += "\n</details>\n\n"
-        
-        if suggestion_count > 0:
-          report += f"<details>\n<summary>💡 Suggestions ({suggestion_count})</summary>\n\n"
-          report += "| File | Line | Rule | Message |\n"
-          report += "|------|------|------|----------|\n"
-          for issue in filtered_issues['suggestion']:
-            line_link = format_line_link(issue['file'], issue['line'])
-            report += f"| {issue['file']} | {line_link} | {issue['rule']} | {issue['message']} |\n"
-          report += "\n</details>\n\n"
-        
-        # Write report
-        with open('vale_report.md', 'w') as f:
-          f.write(report)
-        
-        # Write counts for next steps
-        with open('issue_counts.txt', 'w') as f:
-          f.write(f"errors={error_count}\n")
-          f.write(f"warnings={warning_count}\n")
-          f.write(f"suggestions={suggestion_count}\n")
-        
-        print(f"Generated report with {total_count} issues")
-        PYTHON_SCRIPT
-        
-        # Set outputs
+        # Set outputs from the generated counts file
         if [ -f issue_counts.txt ]; then
           source issue_counts.txt
-          echo "has_issues=true" >> $GITHUB_OUTPUT
+          
+          if [ $errors -gt 0 ] || [ $warnings -gt 0 ] || [ $suggestions -gt 0 ]; then
+            echo "has_issues=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_issues=false" >> $GITHUB_OUTPUT
+          fi
+          
           echo "error_count=$errors" >> $GITHUB_OUTPUT
           echo "warning_count=$warnings" >> $GITHUB_OUTPUT
           echo "suggestion_count=$suggestions" >> $GITHUB_OUTPUT
+          
+          if [ "${{ inputs.debug }}" == "true" ]; then
+            echo "::debug::Errors: $errors, Warnings: $warnings, Suggestions: $suggestions"
+          fi
         else
+          echo "::warning::Failed to read issue counts"
           echo "has_issues=false" >> $GITHUB_OUTPUT
           echo "error_count=0" >> $GITHUB_OUTPUT
         fi
@@ -344,7 +274,14 @@ runs:
     - name: Cleanup
       if: always()
       shell: bash
+      env:
+        TEMP_DIR: ${{ steps.setup-temp.outputs.temp_dir }}
       run: |
+        if [ "${{ inputs.debug }}" == "true" ]; then
+          echo "::debug::Cleaning up temporary files"
+        fi
+        
+        # Clean up workspace files
         rm -f .vale.ini.temp
         rm -f changed_files.txt
         rm -f files_to_lint.txt
@@ -353,4 +290,14 @@ runs:
         rm -f vale_report.md
         rm -f issue_counts.txt
         rm -rf .vale-styles
+        
+        # Clean up temp directory if it exists
+        if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
+          rm -rf "$TEMP_DIR"
+          if [ "${{ inputs.debug }}" == "true" ]; then
+            echo "::debug::Removed temp directory: $TEMP_DIR"
+          fi
+        fi
+        
+        echo "✓ Cleanup complete"
 

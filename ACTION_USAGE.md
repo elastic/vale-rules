@@ -42,6 +42,7 @@ All inputs are optional:
 | `files` | Files or directories to lint (space-separated). If not provided, lints changed files in PR. | `''` (empty, uses changed files) |
 | `fail_on_error` | Fail the action if Vale finds error-level issues | `false` |
 | `vale_version` | Vale version to install | `latest` |
+| `debug` | Enable debug output for troubleshooting | `false` |
 
 ## Examples
 
@@ -65,6 +66,14 @@ All inputs are optional:
 - uses: elastic/vale-rules@main
   with:
     fail_on_error: true
+```
+
+### Enable debug mode
+
+```yaml
+- uses: elastic/vale-rules@main
+  with:
+    debug: true
 ```
 
 ## Complete example
@@ -111,16 +120,20 @@ The action automatically detects the runner OS and installs Vale accordingly:
 
 ## How it works
 
-1. Detects the operating system
-2. Installs Vale if not already present
-3. Downloads the latest Elastic style guide package from this repository (includes `.vale.ini` configuration and styles)
-4. Vale automatically merges the packaged configuration settings (SkippedScopes, IgnoredScopes, TokenIgnores, etc.)
-5. Identifies files to lint (changed files in PR or specified files)
-6. Gets modified line ranges from git diff
-7. Runs Vale on the files with JSON output
-8. Filters issues to only those on modified lines
-9. Generates a markdown report with collapsible sections organized by severity
-10. Posts or updates a sticky comment on the PR with the results
+1. Validates that required dependencies are available (jq, python3, git)
+2. Detects the operating system
+3. Installs Vale if not already present
+4. Downloads the latest Elastic style guide package from this repository (includes `.vale.ini` configuration and styles)
+5. Vale automatically merges the packaged configuration settings (SkippedScopes, IgnoredScopes, TokenIgnores, etc.)
+6. Identifies files to lint (changed files in PR or specified files)
+7. Creates a temporary directory for intermediate files
+8. Gets modified line ranges from git diff
+9. Runs Vale on the files with JSON output
+10. Filters issues to only those on modified lines using the Python reporter script
+11. Generates GitHub Actions annotations for inline diff display
+12. Generates a markdown report with collapsible sections organized by severity
+13. Posts or updates a sticky comment on the PR with the results
+14. Cleans up all temporary files
 
 ## Comment format
 
@@ -150,9 +163,11 @@ The action posts a sticky comment on your PR with collapsible sections and click
 ```
 
 **Features:**
-- Line numbers are clickable links that navigate directly to the issue location in the file
+- Line numbers are clickable links that navigate directly to the issue location in the **PR diff view**
+- Links open the Files Changed tab showing the exact line in context
 - The comment is automatically updated when you push new commits, so you won't get multiple comments cluttering your PR
 - Issues also appear as inline annotations in the Files Changed tab for quick identification
+- Error, warning, and suggestion issues are color-coded (red, yellow, blue)
 
 ## Permissions required
 
@@ -187,6 +202,23 @@ permissions:
 ### Action fails when `fail_on_error` is true
 
 The action will fail if error-level Vale issues are found when `fail_on_error: true` is set. This is by design. To pass the check, you need to fix the error-level issues in your documentation.
+
+### Need to debug the action?
+
+Enable debug mode to see detailed execution information:
+
+```yaml
+- uses: elastic/vale-rules@main
+  with:
+    debug: true
+```
+
+This will output additional information about:
+- Temporary directory creation
+- Modified line ranges
+- Vale execution
+- Issue counts
+- File operations
 
 ## Version pinning
 
