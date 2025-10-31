@@ -154,6 +154,9 @@ runs:
       id: vale-report
       if: steps.files-to-lint.outputs.has_files == 'true'
       shell: bash
+      env:
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
       run: |
         echo "Running Vale on files..."
         
@@ -173,6 +176,10 @@ runs:
         import json
         import sys
         import os
+        
+        # Get GitHub context for building links
+        github_repo = os.environ.get('GITHUB_REPOSITORY', '')
+        github_sha = os.environ.get('GITHUB_SHA', '')
         
         # Load Vale output
         with open('vale_output.json', 'r') as f:
@@ -221,6 +228,20 @@ runs:
               'message': issue.get('Message', '')
             })
         
+        # Output GitHub Actions annotations for inline diff view
+        for severity, issues in filtered_issues.items():
+          for issue in issues:
+            # Map Vale severity to GitHub annotation level
+            if severity == 'error':
+              annotation_level = 'error'
+            elif severity == 'warning':
+              annotation_level = 'warning'
+            else:
+              annotation_level = 'notice'
+            
+            # Output GitHub Actions annotation
+            print(f"::{annotation_level} file={issue['file']},line={issue['line']}::{issue['rule']}: {issue['message']}")
+        
         # Generate markdown report
         error_count = len(filtered_issues['error'])
         warning_count = len(filtered_issues['warning'])
@@ -244,6 +265,13 @@ runs:
         
         summary = ", ".join(summary_parts)
         
+        # Helper function to create GitHub line links
+        def format_line_link(file_path, line_num):
+          if github_repo and github_sha:
+            url = f"https://github.com/{github_repo}/blob/{github_sha}/{file_path}#L{line_num}"
+            return f"[{line_num}]({url})"
+          return str(line_num)
+        
         report = f"## Vale Linting Results\n\n**Summary:** {summary} found\n\n"
         
         # Add sections for each severity
@@ -252,7 +280,8 @@ runs:
           report += "| File | Line | Rule | Message |\n"
           report += "|------|------|------|----------|\n"
           for issue in filtered_issues['error']:
-            report += f"| {issue['file']} | {issue['line']} | {issue['rule']} | {issue['message']} |\n"
+            line_link = format_line_link(issue['file'], issue['line'])
+            report += f"| {issue['file']} | {line_link} | {issue['rule']} | {issue['message']} |\n"
           report += "\n</details>\n\n"
         
         if warning_count > 0:
@@ -260,7 +289,8 @@ runs:
           report += "| File | Line | Rule | Message |\n"
           report += "|------|------|------|----------|\n"
           for issue in filtered_issues['warning']:
-            report += f"| {issue['file']} | {issue['line']} | {issue['rule']} | {issue['message']} |\n"
+            line_link = format_line_link(issue['file'], issue['line'])
+            report += f"| {issue['file']} | {line_link} | {issue['rule']} | {issue['message']} |\n"
           report += "\n</details>\n\n"
         
         if suggestion_count > 0:
@@ -268,7 +298,8 @@ runs:
           report += "| File | Line | Rule | Message |\n"
           report += "|------|------|------|----------|\n"
           for issue in filtered_issues['suggestion']:
-            report += f"| {issue['file']} | {issue['line']} | {issue['rule']} | {issue['message']} |\n"
+            line_link = format_line_link(issue['file'], issue['line'])
+            report += f"| {issue['file']} | {line_link} | {issue['rule']} | {issue['message']} |\n"
           report += "\n</details>\n\n"
         
         # Write report

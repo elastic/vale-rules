@@ -124,7 +124,7 @@ The action automatically detects the runner OS and installs Vale accordingly:
 
 ## Comment format
 
-The action posts a sticky comment on your PR that looks like this:
+The action posts a sticky comment on your PR with collapsible sections and clickable line numbers:
 
 ```markdown
 ## Vale Linting Results
@@ -136,8 +136,8 @@ The action posts a sticky comment on your PR that looks like this:
 
 | File | Line | Rule | Message |
 |------|------|------|---------|
-| docs/api.md | 45 | Elastic.Passive | Use active voice... |
-| README.md | 12 | Elastic.DontUse | Avoid using... |
+| docs/api.md | [45](link) | Elastic.Passive | Use active voice... |
+| README.md | [12](link) | Elastic.DontUse | Avoid using... |
 </details>
 
 <details>
@@ -149,7 +149,10 @@ The action posts a sticky comment on your PR that looks like this:
 </details>
 ```
 
-The comment is automatically updated when you push new commits, so you won't get multiple comments cluttering your PR.
+**Features:**
+- Line numbers are clickable links that navigate directly to the issue location in the file
+- The comment is automatically updated when you push new commits, so you won't get multiple comments cluttering your PR
+- Issues also appear as inline annotations in the Files Changed tab for quick identification
 
 ## Permissions required
 
