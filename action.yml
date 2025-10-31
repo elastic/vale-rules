@@ -96,42 +96,40 @@ runs:
         echo "---" >> $GITHUB_STEP_SUMMARY
         echo "*View inline annotations above for issue locations.*" >> $GITHUB_STEP_SUMMARY
         
-        # Generate PR comment message
+        # Generate PR comment message and save to output
         if [ "$TOTAL_COUNT" -eq 0 ]; then
-          PR_MESSAGE="## 📝 Vale Linting Results
+          cat >> $GITHUB_OUTPUT << 'EOF'
+pr_comment<<COMMENT
+## 📝 Vale Linting Results
 
-✅ **No issues found!** Your documentation looks great."
+✅ **No issues found!** Your documentation looks great.
+COMMENT
+EOF
         else
-          PR_MESSAGE="## 📝 Vale Linting Results
+          # Determine status message
+          if [ "$ERROR_COUNT" -gt 0 ]; then
+            STATUS_MSG="❌ **Action failed due to errors.** Please fix the errors before merging."
+          else
+            STATUS_MSG="⚠️ Please review the warnings and suggestions."
+          fi
+          
+          cat >> $GITHUB_OUTPUT << EOF
+pr_comment<<COMMENT
+## 📝 Vale Linting Results
 
 | Severity | Count |
 |----------|-------|
 | 🔴 Errors | $ERROR_COUNT |
 | 🟡 Warnings | $WARNING_COUNT |
 | 💡 Suggestions | $SUGGESTION_COUNT |
-| **Total** | **$TOTAL_COUNT** |"
-          
-          if [ "$ERROR_COUNT" -gt 0 ]; then
-            PR_MESSAGE="${PR_MESSAGE}
+| **Total** | **$TOTAL_COUNT** |
 
-❌ **Action failed due to errors.** Please fix the errors before merging."
-          else
-            PR_MESSAGE="${PR_MESSAGE}
+$STATUS_MSG
 
-⚠️ Please review the warnings and suggestions."
-          fi
-          
-          PR_MESSAGE="${PR_MESSAGE}
-
-[View detailed report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+[View detailed report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+COMMENT
+EOF
         fi
-        
-        # Save PR message to output
-        {
-          echo 'pr_comment<<EOF'
-          echo "$PR_MESSAGE"
-          echo 'EOF'
-        } >> $GITHUB_OUTPUT
     
     - name: Post PR summary comment
       if: always() && github.event.pull_request
