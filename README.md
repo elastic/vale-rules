@@ -4,12 +4,6 @@ This repo contains a set of linting rules for Vale based on the Elastic style gu
 
 ## Get started
 
-<<<<<<< HEAD
-### Use in GitHub Actions (old version)
-=======
-### Use in GitHub Actions
->>>>>>> feature-branch
-
 Add the Elastic Vale linter to your repository's CI/CD pipeline:
 
 ```yaml
