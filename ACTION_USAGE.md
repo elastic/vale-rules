@@ -29,8 +29,6 @@ jobs:
       
       - name: Run Elastic Vale Linter
         uses: elastic/vale-rules@main
-        with:
-          reporter: github-pr-review
 ```
 
 **Note:** Using `@main` ensures you always get the latest style rules. For stability, you can pin to a specific version tag once releases are available (e.g., `@v1.0.0`).
@@ -42,10 +40,9 @@ All inputs are optional:
 | Input | Description | Default |
 |-------|-------------|---------|
 | `files` | Files or directories to lint (space-separated). If not provided, lints changed files in PR. | `''` (empty, uses changed files) |
-| `fail_on_error` | Fail the action if Vale finds errors | `false` |
-| `reporter` | Reviewdog reporter type | `github-pr-review` |
-| `filter_mode` | Reviewdog filter mode | `added` |
+| `fail_on_error` | Fail the action if Vale finds error-level issues | `false` |
 | `vale_version` | Vale version to install | `latest` |
+| `debug` | Enable debug output for troubleshooting | `false` |
 
 ## Examples
 
@@ -63,7 +60,7 @@ All inputs are optional:
     files: 'docs/ README.md'
 ```
 
-### Fail on errors
+### Fail on error-level issues
 
 ```yaml
 - uses: elastic/vale-rules@main
@@ -71,47 +68,12 @@ All inputs are optional:
     fail_on_error: true
 ```
 
-### Use different reviewdog reporter
+### Enable debug mode
 
 ```yaml
-# For inline PR comments
 - uses: elastic/vale-rules@main
   with:
-    reporter: github-pr-review
-
-# For check run annotations
-- uses: elastic/vale-rules@main
-  with:
-    reporter: github-pr-check
-
-# For both
-- uses: elastic/vale-rules@main
-  with:
-    reporter: github-check
-```
-
-### Different filter modes
-
-```yaml
-# Only show issues on added lines (default)
-- uses: elastic/vale-rules@main
-  with:
-    filter_mode: added
-
-# Show issues on the entire diff context
-- uses: elastic/vale-rules@main
-  with:
-    filter_mode: diff_context
-
-# Show all issues in changed files
-- uses: elastic/vale-rules@main
-  with:
-    filter_mode: file
-
-# Show all issues (no filtering)
-- uses: elastic/vale-rules@main
-  with:
-    filter_mode: nofilter
+    debug: true
 ```
 
 ## Complete example
@@ -145,8 +107,6 @@ jobs:
       - name: Run Vale with Elastic style guide
         uses: elastic/vale-rules@main
         with:
-          reporter: github-pr-review
-          filter_mode: added
           fail_on_error: false
 ```
 
@@ -160,13 +120,54 @@ The action automatically detects the runner OS and installs Vale accordingly:
 
 ## How it works
 
-1. Detects the operating system
-2. Installs Vale if not already present
-3. Downloads the latest Elastic style guide package from this repository (includes `.vale.ini` configuration and styles)
-4. Vale automatically merges the packaged configuration settings (SkippedScopes, IgnoredScopes, TokenIgnores, etc.)
-5. Identifies files to lint (changed files in PR or specified files)
-6. Runs Vale on the files with the Elastic configuration
-7. Posts results as PR comments or check annotations via reviewdog
+1. Validates that required dependencies are available (jq, python3, git)
+2. Detects the operating system
+3. Installs Vale if not already present
+4. Downloads the latest Elastic style guide package from this repository (includes `.vale.ini` configuration and styles)
+5. Vale automatically merges the packaged configuration settings (SkippedScopes, IgnoredScopes, TokenIgnores, etc.)
+6. Identifies files to lint (changed files in PR or specified files)
+7. Creates a temporary directory for intermediate files
+8. Gets modified line ranges from git diff
+9. Runs Vale on the files with JSON output
+10. Filters issues to only those on modified lines using the Python reporter script
+11. Generates GitHub Actions annotations for inline diff display
+12. Generates a markdown report with collapsible sections organized by severity
+13. Posts or updates a sticky comment on the PR with the results
+14. Cleans up all temporary files
+
+## Comment format
+
+The action posts a sticky comment on your PR with collapsible sections and clickable line numbers:
+
+```markdown
+## Vale Linting Results
+
+**Summary:** 2 errors, 5 warnings, 3 suggestions found
+
+<details>
+<summary>❌ Errors (2)</summary>
+
+| File | Line | Rule | Message |
+|------|------|------|---------|
+| docs/api.md | [45](link) | Elastic.Passive | Use active voice... |
+| README.md | [12](link) | Elastic.DontUse | Avoid using... |
+</details>
+
+<details>
+<summary>⚠️ Warnings (5)</summary>
+
+| File | Line | Rule | Message |
+|------|------|------|---------|
+| ... | ... | ... | ... |
+</details>
+```
+
+**Features:**
+- Line numbers are clickable links that navigate directly to the issue location in the **PR diff view**
+- Links open the Files Changed tab showing the exact line in context
+- The comment is automatically updated when you push new commits, so you won't get multiple comments cluttering your PR
+- Issues also appear as inline annotations in the Files Changed tab for quick identification
+- Error, warning, and suggestion issues are color-coded (red, yellow, blue)
 
 ## Permissions required
 
@@ -174,18 +175,18 @@ The action requires the following permissions:
 
 ```yaml
 permissions:
-  contents: read           # To checkout code
-  pull-requests: write     # To post PR comments (for github-pr-review reporter)
-  checks: write            # To create check runs (for github-pr-check reporter)
+  contents: read           # To checkout code and read git history
+  pull-requests: write     # To post/update PR comments
 ```
 
 ## Troubleshooting
 
-### No comments appearing on PR
+### No comment appearing on PR
 
 1. Ensure `pull-requests: write` permission is set
 2. Check that files were actually changed in the PR
-3. Try using `filter_mode: file` to see all issues in changed files
+3. Verify the changed files are `.md` or `.adoc` files
+4. Check the action logs for any errors
 
 ### Action fails to install Vale
 
@@ -194,9 +195,30 @@ permissions:
 
 ### Vale finds no issues but you expect some
 
-1. Verify the files match the patterns in your `.vale.ini` (`.md`, `.adoc`)
-2. Check that the files are included in the `files` input or are part of the PR diff
-3. Use `filter_mode: nofilter` to see all issues
+1. Verify the files match the patterns (`.md`, `.adoc`)
+2. Check that the issues are on lines you actually modified (the action only reports issues on changed lines)
+3. Try running Vale locally with the installation scripts to verify
+
+### Action fails when `fail_on_error` is true
+
+The action will fail if error-level Vale issues are found when `fail_on_error: true` is set. This is by design. To pass the check, you need to fix the error-level issues in your documentation.
+
+### Need to debug the action?
+
+Enable debug mode to see detailed execution information:
+
+```yaml
+- uses: elastic/vale-rules@main
+  with:
+    debug: true
+```
+
+This will output additional information about:
+- Temporary directory creation
+- Modified line ranges
+- Vale execution
+- Issue counts
+- File operations
 
 ## Version pinning
 

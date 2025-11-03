@@ -7,6 +7,4 @@ action:
 swap:
   'long press': select and hold
   'pinch': zoom out
-  'press': select
-  'spread': zoom in
   'tap': select

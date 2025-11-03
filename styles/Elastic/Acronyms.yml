@@ -15,6 +15,7 @@ exceptions:
   - API
   - ASP
   - ATP
+  - ATT
   - AV
   - AWS
   - BBQ
@@ -81,6 +82,7 @@ exceptions:
   - LESS
   - LLM
   - LLDB
+  - MITRE
   - MDR
   - MFA
   - ML
@@ -138,6 +140,7 @@ exceptions:
   - TODO
   - TSVB
   - TTPs
+  - UI
   - URI
   - URL
   - USB

@@ -12,25 +12,42 @@ inputs:
     required: false
     default: ''
   fail_on_error:
-    description: 'Fail the action if Vale finds errors'
+    description: 'Fail the action if Vale finds error-level issues'
     required: false
     default: 'false'
-  reporter:
-    description: 'Reviewdog reporter (github-pr-review, github-pr-check, github-check)'
-    required: false
-    default: 'github-pr-review'
-  filter_mode:
-    description: 'Reviewdog filter mode (added, diff_context, file, nofilter)'
-    required: false
-    default: 'added'
   vale_version:
     description: 'Vale version to install (default: latest via package manager)'
     required: false
     default: 'latest'
+  debug:
+    description: 'Enable debug output'
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
   steps:
+    - name: Validate dependencies
+      shell: bash
+      run: |
+        # Check required tools
+        if ! command -v jq &> /dev/null; then
+          echo "::error::jq is not installed. Please install jq on your runner."
+          exit 1
+        fi
+        
+        if ! command -v python3 &> /dev/null; then
+          echo "::error::python3 is not installed. Please install Python 3 on your runner."
+          exit 1
+        fi
+        
+        if ! command -v git &> /dev/null; then
+          echo "::error::git is not installed. Please install git on your runner."
+          exit 1
+        fi
+        
+        echo "✓ All dependencies are available"
+    
     - name: Detect OS
       id: detect-os
       shell: bash
@@ -123,51 +140,164 @@ runs:
           echo "has_files=false" >> $GITHUB_OUTPUT
         fi
     
-    - name: Install reviewdog
+    - name: Setup temp directory
+      id: setup-temp
       if: steps.files-to-lint.outputs.has_files == 'true'
-      uses: reviewdog/action-setup@v1
-      with:
-        reviewdog_version: latest
+      shell: bash
+      run: |
+        # Create temp directory for Vale operation
+        TEMP_DIR=$(mktemp -d -t vale-lint-XXXXXX)
+        echo "temp_dir=$TEMP_DIR" >> $GITHUB_OUTPUT
+        echo "Created temp directory: $TEMP_DIR"
+        
+        if [ "${{ inputs.debug }}" == "true" ]; then
+          echo "::debug::Temp directory created at $TEMP_DIR"
+        fi
     
-    - name: Run Vale with reviewdog
+    - name: Get modified line ranges
+      id: modified-lines
+      if: steps.files-to-lint.outputs.has_files == 'true' && github.event.pull_request.base.sha != ''
+      shell: bash
+      env:
+        TEMP_DIR: ${{ steps.setup-temp.outputs.temp_dir }}
+      run: |
+        echo "Getting modified line ranges for each file..."
+        
+        # Create a file to store line ranges: filename|start_line|line_count
+        > "$TEMP_DIR/line_ranges.txt"
+        
+        while IFS= read -r file; do
+          if [ -f "$file" ]; then
+            # Get line ranges from git diff
+            git diff -U0 ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} "$file" \
+              | grep '^@@' | while read -r line; do
+                # Extract start line and count from @@ -x,y +a,b @@
+                range=$(echo "$line" | sed -n 's/^@@ -[0-9,]* +\([0-9]*\),*\([0-9]*\).*/\1 \2/p')
+                start=$(echo "$range" | awk '{print $1}')
+                count=$(echo "$range" | awk '{print $2}')
+                
+                # If count is empty, it means only 1 line was changed
+                if [ -z "$count" ]; then
+                  count=1
+                fi
+                
+                echo "$file|$start|$count" >> "$TEMP_DIR/line_ranges.txt"
+              done
+          fi
+        done < files_to_lint.txt
+        
+        if [ -s "$TEMP_DIR/line_ranges.txt" ]; then
+          echo "Modified line ranges:"
+          cat "$TEMP_DIR/line_ranges.txt"
+          
+          # Copy to workspace for Python script
+          cp "$TEMP_DIR/line_ranges.txt" line_ranges.txt
+        fi
+    
+    - name: Run Vale and generate report
+      id: vale-report
       if: steps.files-to-lint.outputs.has_files == 'true'
       shell: bash
       env:
-        REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        DEBUG: ${{ inputs.debug }}
       run: |
+        if [ "${{ inputs.debug }}" == "true" ]; then
+          echo "::debug::Running Vale with debug mode enabled"
+          set -x
+        fi
+        
         echo "Running Vale on files..."
         
-        # Run Vale on each file
-        while IFS= read -r file; do
-          if [ -f "$file" ]; then
-            echo "Linting: $file"
-            vale --config=.vale.ini.temp --output=line "$file" 2>&1 || true
+        # Run Vale with JSON output on all files
+        if ! vale --config=.vale.ini.temp --output=JSON $(cat files_to_lint.txt | tr '\n' ' ') > vale_output.json 2>&1; then
+          # Vale exited with error, but might have found issues
+          if [ "${{ inputs.debug }}" == "true" ]; then
+            echo "::debug::Vale exited with non-zero code, checking output"
           fi
-        done < files_to_lint.txt > vale_output.txt
-        
-        # Show output
-        if [ -s vale_output.txt ]; then
-          echo "Vale found the following issues:"
-          cat vale_output.txt
-          
-          # Send to reviewdog
-          cat vale_output.txt | \
-          reviewdog -efm="%f:%l:%c:%m" \
-            -name="Elastic Vale" \
-            -reporter="${{ inputs.reporter }}" \
-            -filter-mode="${{ inputs.filter_mode }}" \
-            -fail-on-error="${{ inputs.fail_on_error }}"
-        else
-          echo "✓ No Vale issues found"
         fi
+        
+        # Check if vale_output.json exists and is valid JSON
+        if [ ! -f vale_output.json ] || ! jq empty vale_output.json 2>/dev/null; then
+          echo "No issues found or Vale produced no output"
+          echo "has_issues=false" >> $GITHUB_OUTPUT
+          echo "error_count=0" >> $GITHUB_OUTPUT
+          
+          # Create clean report
+          echo "## ✅ Vale Linting Results" > vale_report.md
+          echo "" >> vale_report.md
+          echo "**No issues found on modified lines!**" >> vale_report.md
+          exit 0
+        fi
+        
+        # Run the Python reporter script
+        python3 ${{ github.action_path }}/scripts/vale_reporter.py
+        
+        # Set outputs from the generated counts file
+        if [ -f issue_counts.txt ]; then
+          source issue_counts.txt
+          
+          if [ $errors -gt 0 ] || [ $warnings -gt 0 ] || [ $suggestions -gt 0 ]; then
+            echo "has_issues=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_issues=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "error_count=$errors" >> $GITHUB_OUTPUT
+          echo "warning_count=$warnings" >> $GITHUB_OUTPUT
+          echo "suggestion_count=$suggestions" >> $GITHUB_OUTPUT
+          
+          if [ "${{ inputs.debug }}" == "true" ]; then
+            echo "::debug::Errors: $errors, Warnings: $warnings, Suggestions: $suggestions"
+          fi
+        else
+          echo "::warning::Failed to read issue counts"
+          echo "has_issues=false" >> $GITHUB_OUTPUT
+          echo "error_count=0" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Post sticky comment
+      if: steps.vale-report.outputs.has_issues == 'true' || steps.vale-report.outputs.has_issues == 'false'
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        header: elastic-vale-results
+        path: vale_report.md
+    
+    - name: Fail on errors
+      if: inputs.fail_on_error == 'true' && steps.vale-report.outputs.error_count != '0'
+      shell: bash
+      run: |
+        echo "❌ Vale found ${{ steps.vale-report.outputs.error_count }} error-level issue(s)"
+        exit 1
     
     - name: Cleanup
       if: always()
       shell: bash
+      env:
+        TEMP_DIR: ${{ steps.setup-temp.outputs.temp_dir }}
       run: |
+        if [ "${{ inputs.debug }}" == "true" ]; then
+          echo "::debug::Cleaning up temporary files"
+        fi
+        
+        # Clean up workspace files
         rm -f .vale.ini.temp
         rm -f changed_files.txt
         rm -f files_to_lint.txt
-        rm -f vale_output.txt
+        rm -f vale_output.json
+        rm -f line_ranges.txt
+        rm -f vale_report.md
+        rm -f issue_counts.txt
         rm -rf .vale-styles
+        
+        # Clean up temp directory if it exists
+        if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
+          rm -rf "$TEMP_DIR"
+          if [ "${{ inputs.debug }}" == "true" ]; then
+            echo "::debug::Removed temp directory: $TEMP_DIR"
+          fi
+        fi
+        
+        echo "✓ Cleanup complete"
 
