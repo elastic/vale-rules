@@ -253,5 +253,5 @@ Write-Host "Styles installed to: $valeStylesDir\Elastic"
 Write-Host ""
 Write-Host "To update the styles in the future:"
 Write-Host "  • Re-run this script, or"
-Write-Host "  • Run 'vale --config=`"$valeConfigFile`" sync' to update to the latest package"
+Write-Host "  • Run 'vale --config=`"`$valeConfigFile`" sync' to update to the latest package"
 

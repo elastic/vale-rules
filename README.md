@@ -51,7 +51,7 @@ curl -fsSL https://raw.githubusercontent.com/elastic/vale-rules/main/install-lin
 **Windows (PowerShell):**
 ```powershell
 Invoke-WebRequest -Uri https://raw.githubusercontent.com/elastic/vale-rules/main/install-windows.ps1 -OutFile install-windows.ps1
-.\install-windows.ps1
+powershell -ExecutionPolicy Bypass -File .\install-windows.ps1
 ```
 
 ## Install the VS Code extension
