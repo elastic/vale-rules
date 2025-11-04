@@ -33,22 +33,40 @@ function Write-Info {
 
 # 1. Detect Windows
 Write-Info "Checking operating system..."
-if ($PSVersionTable.Platform -eq "Unix") {
+# PowerShell 5.1 compatibility: check PSEdition (Desktop = Windows PS 5.1) or OS environment variable
+if ($PSVersionTable.PSEdition -eq "Desktop") {
+    # PowerShell 5.1 on Windows
+    Write-Success "[OK] Running on Windows"
+} elseif ($PSVersionTable.PSEdition -eq "Core") {
+    # PowerShell Core - check Platform
+    if ($PSVersionTable.Platform -eq "Unix") {
+        Write-ErrorMsg "This script is designed for Windows only."
+        exit 1
+    }
+    Write-Success "[OK] Running on Windows"
+} elseif ($env:OS -like "*Windows*") {
+    # Fallback: check OS environment variable
+    Write-Success "[OK] Running on Windows"
+} else {
     Write-ErrorMsg "This script is designed for Windows only."
     exit 1
 }
-Write-Success "✓ Running on Windows"
 
 # 2. Check if Vale is already installed
 Write-Info "Checking for existing Vale installation..."
+$valeAlreadyInstalled = $false
 try {
-    $valeVersion = & vale --version 2>$null
-    Write-Success "✓ Vale is already installed: $valeVersion"
-    $valeAlreadyInstalled = $true
+    $valeOutput = & vale --version 2>&1
+    if ($? -and $valeOutput) {
+        $valeVersion = ($valeOutput | Out-String).Trim()
+        Write-Success "[OK] Vale is already installed: $valeVersion"
+        $valeAlreadyInstalled = $true
+    } else {
+        Write-Info "Vale not found, will install it"
+    }
 }
 catch {
     Write-Info "Vale not found, will install it"
-    $valeAlreadyInstalled = $false
 }
 
 # 3. If Vale is not installed, install it
@@ -60,7 +78,7 @@ if (-not $valeAlreadyInstalled) {
         Write-Info "Installing Vale via Chocolatey..."
         try {
             choco install vale -y
-            Write-Success "✓ Vale installed successfully via Chocolatey"
+            Write-Success "[OK] Vale installed successfully via Chocolatey"
         }
         catch {
             Write-ErrorMsg "Failed to install Vale via Chocolatey"
@@ -73,7 +91,7 @@ if (-not $valeAlreadyInstalled) {
         Write-Info "Installing Vale via Scoop..."
         try {
             scoop install vale
-            Write-Success "✓ Vale installed successfully via Scoop"
+            Write-Success "[OK] Vale installed successfully via Scoop"
         }
         catch {
             Write-ErrorMsg "Failed to install Vale via Scoop"
@@ -113,7 +131,7 @@ if (-not $valeAlreadyInstalled) {
             # Clean up
             Remove-Item $tempZip
             
-            Write-Success "✓ Vale installed successfully to $installDir"
+            Write-Success "[OK] Vale installed successfully to $installDir"
             Write-Info "Note: You may need to restart your terminal for PATH changes to take effect"
         }
         catch {
@@ -127,7 +145,7 @@ if (-not $valeAlreadyInstalled) {
     Write-Info "Verifying Vale installation..."
     try {
         $valeVersion = & vale --version
-        Write-Success "✓ Vale is installed: $valeVersion"
+        Write-Success "[OK] Vale is installed: $valeVersion"
     }
     catch {
         Write-ErrorMsg "Vale installation verification failed"
@@ -149,8 +167,11 @@ if (Test-Path $valeConfigDir) {
     if (Test-Path "$valeStylesDir\Elastic") {
         $isElastic = $true
     }
-    if ((Test-Path $valeConfigFile) -and (Get-Content $valeConfigFile -Raw | Select-String -Pattern "elastic-vale.zip" -Quiet)) {
-        $isElastic = $true
+    if (Test-Path $valeConfigFile) {
+        $configContent = Get-Content $valeConfigFile -Raw
+        if ($configContent -match "elastic-vale\.zip") {
+            $isElastic = $true
+        }
     }
     
     if ($isElastic) {
@@ -193,13 +214,13 @@ Packages = https://github.com/elastic/vale-rules/releases/latest/download/elasti
 
 Set-Content -Path $valeConfigFile -Value $configContent -Encoding UTF8
 
-Write-Success "✓ Vale configuration created at: $valeConfigFile"
+Write-Success "[OK] Vale configuration created at: $valeConfigFile"
 
 # 7. Download and install Elastic style package
 Write-Info "Downloading and installing Elastic style package..."
 try {
     & vale --config="$valeConfigFile" sync
-    Write-Success "✓ Elastic styles package downloaded and installed successfully"
+    Write-Success "[OK] Elastic styles package downloaded and installed successfully"
 }
 catch {
     Write-ErrorMsg "Failed to sync Vale styles package: $_"
@@ -214,10 +235,10 @@ if ((Test-Path "$valeStylesDir\Elastic") -and (Get-ChildItem "$valeStylesDir\Ela
     if (Test-Path $versionFile) {
         $installedVersion = Get-Content $versionFile -Raw
         $installedVersion = $installedVersion.Trim()
-        Write-Success "✓ Elastic styles installed and accessible (version: $installedVersion)"
+        Write-Success "[OK] Elastic styles installed and accessible (version: $installedVersion)"
     }
     else {
-        Write-Success "✓ Elastic styles installed and accessible"
+        Write-Success "[OK] Elastic styles installed and accessible"
     }
 }
 else {
@@ -229,7 +250,7 @@ else {
 Write-Info "Performing final verification..."
 try {
     & vale --config="$valeConfigFile" --help | Out-Null
-    Write-Success "✓ Vale configuration is valid"
+    Write-Success "[OK] Vale configuration is valid"
 }
 catch {
     Write-ErrorMsg "Vale configuration verification failed: $_"
@@ -238,20 +259,20 @@ catch {
 
 # 10. Success message
 Write-Host ""
-Write-Success "🎉 Installation completed successfully!"
+Write-Success "Installation completed successfully!"
 Write-Host ""
 if ($installedVersion) {
     Write-Host "Elastic Vale Style Guide version: $installedVersion"
     Write-Host ""
 }
 Write-Host "Vale is now configured with the Elastic style guide. You can:"
-Write-Host "  • Run 'vale <file>' to check a specific file"
-Write-Host "  • Run 'vale <directory>' to check all supported files in a directory"
+Write-Host "  - Run 'vale <file>' to check a specific file"
+Write-Host "  - Run 'vale <directory>' to check all supported files in a directory"
 Write-Host ""
 Write-Host "Configuration file location: $valeConfigFile"
 Write-Host "Styles installed to: $valeStylesDir\Elastic"
 Write-Host ""
 Write-Host "To update the styles in the future:"
-Write-Host "  • Re-run this script, or"
-Write-Host "  • Run vale --config=""$valeConfigFile"" sync to update to the latest package"
+Write-Host "  - Re-run this script, or"
+Write-Host "  - Run 'vale sync' to update to the latest package"
 
