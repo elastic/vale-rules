@@ -263,10 +263,11 @@ runs:
     - name: Post sticky comment
       if: steps.vale-report.outputs.has_issues == 'true' || steps.vale-report.outputs.has_issues == 'false'
       uses: marocchino/sticky-pull-request-comment@v2
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
       with:
         header: elastic-vale-results
         path: vale_report.md
-        GITHUB_TOKEN: ${{ inputs.github_token }}
     
     - name: Fail on errors
       if: inputs.fail_on_error == 'true' && steps.vale-report.outputs.error_count != '0'
