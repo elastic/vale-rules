@@ -29,7 +29,7 @@ jobs:
       
       - uses: elastic/vale-rules@main
         with:
-          reporter: github-pr-review
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 Refer to [ACTION_USAGE.md](ACTION_USAGE.md) for detailed documentation and examples.

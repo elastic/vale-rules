@@ -26,3 +26,4 @@ jobs:
         uses: ./
         with:
           fail_on_error: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}

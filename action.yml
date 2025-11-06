@@ -23,6 +23,9 @@ inputs:
     description: 'Enable debug output'
     required: false
     default: 'false'
+  github_token:
+    description: 'GitHub token for posting PR comments'
+    required: true
 
 runs:
   using: 'composite'
@@ -263,6 +266,7 @@ runs:
       with:
         header: elastic-vale-results
         path: vale_report.md
+        GITHUB_TOKEN: ${{ inputs.github_token }}
     
     - name: Fail on errors
       if: inputs.fail_on_error == 'true' && steps.vale-report.outputs.error_count != '0'

@@ -29,20 +29,21 @@ jobs:
       
       - name: Run Elastic Vale Linter
         uses: elastic/vale-rules@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 **Note:** Using `@main` ensures you always get the latest style rules. For stability, you can pin to a specific version tag once releases are available (e.g., `@v1.0.0`).
 
 ## Inputs
 
-All inputs are optional:
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| `files` | Files or directories to lint (space-separated). If not provided, lints changed files in PR. | `''` (empty, uses changed files) |
-| `fail_on_error` | Fail the action if Vale finds error-level issues | `false` |
-| `vale_version` | Vale version to install | `latest` |
-| `debug` | Enable debug output for troubleshooting | `false` |
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `github_token` | GitHub token for posting PR comments | **Yes** | N/A |
+| `files` | Files or directories to lint (space-separated). If not provided, lints changed files in PR. | No | `''` (empty, uses changed files) |
+| `fail_on_error` | Fail the action if Vale finds error-level issues | No | `false` |
+| `vale_version` | Vale version to install | No | `latest` |
+| `debug` | Enable debug output for troubleshooting | No | `false` |
 
 ## Examples
 
@@ -50,6 +51,8 @@ All inputs are optional:
 
 ```yaml
 - uses: elastic/vale-rules@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### Lint specific files or directories
@@ -57,6 +60,7 @@ All inputs are optional:
 ```yaml
 - uses: elastic/vale-rules@main
   with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
     files: 'docs/ README.md'
 ```
 
@@ -65,6 +69,7 @@ All inputs are optional:
 ```yaml
 - uses: elastic/vale-rules@main
   with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
     fail_on_error: true
 ```
 
@@ -73,6 +78,7 @@ All inputs are optional:
 ```yaml
 - uses: elastic/vale-rules@main
   with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
     debug: true
 ```
 
@@ -107,6 +113,7 @@ jobs:
       - name: Run Vale with Elastic style guide
         uses: elastic/vale-rules@main
         with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           fail_on_error: false
 ```
 
