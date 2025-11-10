@@ -15,9 +15,12 @@ runs:
   using: 'composite'
   steps:
     - name: Download Vale results
-      uses: actions/download-artifact@v4
+      uses: dawidd6/action-download-artifact@v11
       with:
         name: vale-results
+        github_token: ${{ inputs.github_token }}
+        workflow: lint.yml
+        run_id: ${{ github.event.workflow_run.id }}
     
     - name: Check if results exist
       id: check-results
