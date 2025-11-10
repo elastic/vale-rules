@@ -16,10 +16,16 @@ jobs:
     if: github.event.workflow_run.event == 'pull_request'
     
     steps:
+      - name: Debug workflow_run event
+        run: |
+          echo "Workflow run event: ${{ github.event.workflow_run.event }}"
+          echo "Workflow run conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "Workflow run name: ${{ github.event.workflow_run.name }}"
+      
       - name: Checkout code
         uses: actions/checkout@v4
       
       - name: Post Vale Results
-        uses: ./action-report.yml
+        uses: ./report
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

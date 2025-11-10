@@ -232,7 +232,7 @@ runs:
         fi
         
         # Run the Python reporter script
-        python3 ${{ github.action_path }}/scripts/vale_reporter.py
+        python3 ${{ github.action_path }}/vale_reporter.py
         
         # Set outputs from the generated counts file
         if [ -f issue_counts.txt ]; then
