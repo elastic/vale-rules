@@ -93,12 +93,12 @@ jobs:
 
 **Linting workflow:**
 ```yaml
-- uses: elastic/vale-rules/action-lint.yml@main
+- uses: elastic/vale-rules/lint@main
 ```
 
 **Reporting workflow:**
 ```yaml
-- uses: elastic/vale-rules/action-report.yml@main
+- uses: elastic/vale-rules/report@main
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -106,7 +106,7 @@ jobs:
 ### Lint specific files or directories
 
 ```yaml
-- uses: elastic/vale-rules/action-lint.yml@main
+- uses: elastic/vale-rules/lint@main
   with:
     files: 'docs/ README.md'
 ```
@@ -114,7 +114,7 @@ jobs:
 ### Fail on error-level issues
 
 ```yaml
-- uses: elastic/vale-rules/action-lint.yml@main
+- uses: elastic/vale-rules/lint@main
   with:
     fail_on_error: true
 ```
@@ -122,7 +122,7 @@ jobs:
 ### Enable debug mode
 
 ```yaml
-- uses: elastic/vale-rules/action-lint.yml@main
+- uses: elastic/vale-rules/lint@main
   with:
     debug: true
 ```
@@ -198,7 +198,7 @@ The action automatically detects the runner OS and installs Vale accordingly:
 
 ## How it works
 
-### Linting workflow (action-lint.yml)
+### Linting workflow (lint/action.yml)
 
 1. Validates that required dependencies are available (jq, python3, git).
 2. Detects the operating system.
@@ -215,7 +215,7 @@ The action automatically detects the runner OS and installs Vale accordingly:
 13. **Uploads the report as an artifact** (available for 1 day).
 14. Cleans up all temporary files.
 
-### Reporting workflow (action-report.yml)
+### Reporting workflow (report/action.yml)
 
 1. Downloads the Vale results artifact from the linting workflow.
 2. Posts or updates a sticky comment on the PR with the results.
@@ -324,12 +324,12 @@ This will output additional information about:
 It's recommended to pin to a specific version:
 
 ```yaml
-- uses: elastic/vale-rules/action-lint.yml@v1.0.0  # Pin to specific version
-- uses: elastic/vale-rules/action-lint.yml@v1      # Pin to v1.x.x
-- uses: elastic/vale-rules/action-lint.yml@main    # Use latest (not recommended for production)
+- uses: elastic/vale-rules/lint@v1.0.0  # Pin to specific version
+- uses: elastic/vale-rules/lint@v1      # Pin to v1.x.x
+- uses: elastic/vale-rules/lint@main    # Use latest (not recommended for production)
 ```
 
-Apply the same versioning to both action-lint.yml and action-report.yml.
+Apply the same versioning to both lint and report actions.
 
 ## Local testing
 
