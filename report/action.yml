@@ -15,7 +15,7 @@ runs:
   using: 'composite'
   steps:
     - name: Download Vale results
-      uses: dawidd6/action-download-artifact@v3
+      uses: dawidd6/action-download-artifact@v11
       with:
         name: vale-results
         github_token: ${{ inputs.github_token }}
