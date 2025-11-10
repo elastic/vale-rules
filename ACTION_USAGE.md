@@ -4,7 +4,9 @@ This repository provides a reusable GitHub Action that can be used by any Elasti
 
 ## Quick start linting
 
-This action uses a two-workflow setup that supports **fork PRs** safely by separating linting from commenting. It follows the pattern recommended by [test-reporter](https://github.com/marketplace/actions/test-reporter#recommended-setup-for-public-repositories).
+This action uses a two-workflow setup that supports **fork PRs** safely by separating linting from commenting. It follows the pattern recommended by [test-reporter](https://github.com/marketplace/actions/test-reporter#recommended-setup-for-public-repositories)!
+
+This is a test, utilize the dropdown!
 
 ### Step 1: Create the linting workflow
 
