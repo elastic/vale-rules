@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 0
       
       - name: Run Vale Linter
-        uses: elastic/vale-rules/action-lint.yml@main
+        uses: elastic/vale-rules/lint@main
 ```
 
 ### Step 2: Create the reporting workflow
@@ -57,7 +57,7 @@ jobs:
     if: github.event.workflow_run.event == 'pull_request'
     steps:
       - name: Post Vale Results
-        uses: elastic/vale-rules/action-report.yml@main
+        uses: elastic/vale-rules/report@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -72,7 +72,7 @@ jobs:
 
 ## Inputs
 
-### action-lint.yml (Linting workflow)
+### lint/action.yml (Linting workflow)
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
@@ -81,7 +81,7 @@ jobs:
 | `vale_version` | Vale version to install | No | `latest` |
 | `debug` | Enable debug output for troubleshooting | No | `false` |
 
-### action-report.yml (Reporting workflow)
+### report/action.yml (Reporting workflow)
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
@@ -156,7 +156,7 @@ jobs:
           fetch-depth: 0  # Required for proper diff analysis
       
       - name: Run Vale with Elastic style guide
-        uses: elastic/vale-rules/action-lint.yml@main
+        uses: elastic/vale-rules/lint@main
         with:
           fail_on_error: false
           debug: false
@@ -183,7 +183,7 @@ jobs:
     
     steps:
       - name: Post Vale Results as PR Comment
-        uses: elastic/vale-rules/action-report.yml@main
+        uses: elastic/vale-rules/report@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```

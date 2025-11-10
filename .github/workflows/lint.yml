@@ -22,6 +22,6 @@ jobs:
           fetch-depth: 0
       
       - name: Run Elastic Vale Linter
-        uses: ./action-lint.yml
+        uses: ./lint
         with:
           fail_on_error: true

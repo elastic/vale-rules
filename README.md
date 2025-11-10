@@ -29,7 +29,7 @@ jobs:
           fetch-depth: 0
       
       - name: Run Vale Linter
-        uses: elastic/vale-rules/action-lint.yml@main
+        uses: elastic/vale-rules/lint@main
 ```
 
 ```yaml
@@ -51,7 +51,7 @@ jobs:
     if: github.event.workflow_run.event == 'pull_request'
     steps:
       - name: Post Vale Results
-        uses: elastic/vale-rules/action-report.yml@main
+        uses: elastic/vale-rules/report@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
