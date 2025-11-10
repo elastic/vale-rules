@@ -49,12 +49,15 @@ on:
       - completed
 
 permissions:
-  pull-requests: write
+  pull-requests: read
 
 jobs:
   report:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.event == 'pull_request'
+    permissions:
+      pull-requests: write
+    
     steps:
       - name: Post Vale Results
         uses: elastic/vale-rules/report@main
@@ -173,13 +176,15 @@ on:
       - completed
 
 permissions:
-  pull-requests: write
+  pull-requests: read
 
 jobs:
   report:
     name: Post Results
     runs-on: ubuntu-latest
     if: github.event.workflow_run.event == 'pull_request'
+    permissions:
+      pull-requests: write
     
     steps:
       - name: Post Vale Results as PR Comment
@@ -273,10 +278,15 @@ permissions:
 
 ```yaml
 permissions:
-  pull-requests: write  # To post/update PR comments
+  pull-requests: read  # Workflow-level (minimal)
+
+jobs:
+  report:
+    permissions:
+      pull-requests: write  # Job-level (only where needed)
 ```
 
-By separating permissions, we ensure fork PRs can be linted safely without granting write access to untrusted code.
+By separating permissions and granting write access only at the job level, we follow the principle of least privilege while ensuring fork PRs can be linted safely.
 
 ## Troubleshooting
 

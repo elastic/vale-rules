@@ -43,12 +43,15 @@ on:
       - completed
 
 permissions:
-  pull-requests: write
+  pull-requests: read
 
 jobs:
   report:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.event == 'pull_request'
+    permissions:
+      pull-requests: write
+    
     steps:
       - name: Post Vale Results
         uses: elastic/vale-rules/report@main
