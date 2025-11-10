@@ -1,8 +1,6 @@
 # Using the Elastic Vale Action
 
-This repository provides a reusable GitHub Action that can be used by any Elastic repository to lint documentation files with Vale using the Elastic style guide!
-
-This is a test that utilizes the the repetition in the click left corner!!!
+This repository provides a reusable GitHub Action that can be used by any Elastic repository to lint documentation files with Vale using the Elastic style guide.
 
 ## Quick start linting
 
