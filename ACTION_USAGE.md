@@ -2,6 +2,9 @@
 
 This repository provides a reusable GitHub Action that can be used by any Elastic repository to lint documentation files with Vale using the Elastic style guide.
 
+This is a test that utilizes the the repetition in the click left corner!!!
+
+
 ## Quick start linting
 
 This action uses a two-workflow setup that supports **fork PRs** safely by separating linting from commenting. It follows the pattern recommended by [test-reporter](https://github.com/marketplace/actions/test-reporter#recommended-setup-for-public-repositories).
