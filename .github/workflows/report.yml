@@ -1,0 +1,25 @@
+name: Vale Report
+
+on:
+  workflow_run:
+    workflows: ["Vale Lint"]
+    types:
+      - completed
+
+permissions:
+  pull-requests: write
+
+jobs:
+  report:
+    name: Post Results
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.event == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Post Vale Results
+        uses: ./action-report.yml
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}

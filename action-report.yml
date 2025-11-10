@@ -1,0 +1,48 @@
+name: 'Elastic Vale Linter - Report'
+description: 'Post Vale results as PR comment (Step 2: Reporting)'
+author: 'Elastic'
+
+branding:
+  icon: 'message-circle'
+  color: 'blue'
+
+inputs:
+  github_token:
+    description: 'GitHub token for posting PR comments'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download Vale results
+      uses: actions/download-artifact@v4
+      with:
+        name: vale-results
+    
+    - name: Check if results exist
+      id: check-results
+      shell: bash
+      run: |
+        if [ -f vale_report.md ]; then
+          echo "has_results=true" >> $GITHUB_OUTPUT
+          echo "✓ Vale results found"
+        else
+          echo "has_results=false" >> $GITHUB_OUTPUT
+          echo "⚠️ No Vale results found"
+        fi
+    
+    - name: Post sticky comment
+      if: steps.check-results.outputs.has_results == 'true'
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        header: elastic-vale-results
+        path: vale_report.md
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+    
+    - name: Cleanup artifacts
+      if: always()
+      shell: bash
+      run: |
+        rm -f vale_report.md
+        rm -f issue_counts.txt
+        echo "✓ Cleanup complete"

@@ -1,5 +1,5 @@
-name: 'Elastic Vale Linter'
-description: 'Run Vale with Elastic style guide on documentation files'
+name: 'Elastic Vale Linter - Lint'
+description: 'Run Vale with Elastic style guide on documentation files (Step 1: Linting)'
 author: 'Elastic'
 
 branding:
@@ -23,22 +23,10 @@ inputs:
     description: 'Enable debug output'
     required: false
     default: 'false'
-  github_token:
-    description: 'GitHub token for posting PR comments (DEPRECATED: Use two-workflow setup for fork PR support)'
-    required: false
-    default: ''
 
 runs:
   using: 'composite'
   steps:
-    - name: Deprecation warning
-      shell: bash
-      run: |
-        echo "::warning::Direct use of action.yml is deprecated and doesn't support fork PRs."
-        echo "::warning::Use the two-workflow setup with action-lint.yml and action-report.yml instead."
-        echo "::warning::See ACTION_USAGE.md for setup instructions."
-        echo ""
-    
     - name: Validate dependencies
       shell: bash
       run: |
@@ -269,15 +257,15 @@ runs:
           echo "error_count=0" >> $GITHUB_OUTPUT
         fi
     
-    - name: Post sticky comment
-      if: (steps.vale-report.outputs.has_issues == 'true' || steps.vale-report.outputs.has_issues == 'false') && inputs.github_token != ''
-      uses: marocchino/sticky-pull-request-comment@v2
-      continue-on-error: true
-      env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
+    - name: Upload Vale results
+      if: always() && steps.files-to-lint.outputs.has_files == 'true'
+      uses: actions/upload-artifact@v4
       with:
-        header: elastic-vale-results
-        path: vale_report.md
+        name: vale-results
+        path: |
+          vale_report.md
+          issue_counts.txt
+        retention-days: 1
     
     - name: Fail on errors
       if: inputs.fail_on_error == 'true' && steps.vale-report.outputs.error_count != '0'
@@ -296,14 +284,12 @@ runs:
           echo "::debug::Cleaning up temporary files"
         fi
         
-        # Clean up workspace files
+        # Clean up workspace files (keep artifacts for upload)
         rm -f .vale.ini.temp
         rm -f changed_files.txt
         rm -f files_to_lint.txt
         rm -f vale_output.json
         rm -f line_ranges.txt
-        rm -f vale_report.md
-        rm -f issue_counts.txt
         rm -rf .vale-styles
         
         # Clean up temp directory if it exists
@@ -315,4 +301,3 @@ runs:
         fi
         
         echo "✓ Cleanup complete"
-
