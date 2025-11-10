@@ -13,14 +13,18 @@ jobs:
   report:
     name: Post Results
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.event == 'pull_request'
+    # Only run if the workflow was triggered by a pull_request event (not push to main)
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'cancelled'
     
     steps:
       - name: Debug workflow_run event
         run: |
-          echo "Workflow run event: ${{ github.event.workflow_run.event }}"
-          echo "Workflow run conclusion: ${{ github.event.workflow_run.conclusion }}"
-          echo "Workflow run name: ${{ github.event.workflow_run.name }}"
+          echo "Event: ${{ github.event.workflow_run.event }}"
+          echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "Name: ${{ github.event.workflow_run.name }}"
+          echo "Head branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "Head SHA: ${{ github.event.workflow_run.head_sha }}"
+          echo "PR numbers: ${{ toJSON(github.event.workflow_run.pull_requests) }}"
       
       - name: Checkout code
         uses: actions/checkout@v4
