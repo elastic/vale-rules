@@ -4,7 +4,7 @@ This repo contains a set of linting rules for Vale based on the Elastic style gu
 
 ## Get started
 
-Add the Elastic Vale linter to your repository's CI/CD pipeline:
+Add the Elastic Vale linter to your repository's CI/CD pipeline using a two-workflow setup that supports fork PRs:
 
 ```yaml
 # .github/workflows/vale-lint.yml
@@ -16,21 +16,47 @@ on:
       - '**.md'
       - '**.adoc'
 
+permissions:
+  contents: read
+
 jobs:
   vale:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       
-      - uses: elastic/vale-rules@main
+      - name: Run Vale Linter
+        uses: elastic/vale-rules/action-lint.yml@main
+```
+
+```yaml
+# .github/workflows/vale-report.yml
+name: Vale Report
+
+on:
+  workflow_run:
+    workflows: ["Vale Documentation Linting"]
+    types:
+      - completed
+
+permissions:
+  pull-requests: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.event == 'pull_request'
+    steps:
+      - name: Post Vale Results
+        uses: elastic/vale-rules/action-report.yml@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+This two-workflow approach ensures fork PRs are linted safely while still posting results as PR comments.
 
 Refer to [ACTION_USAGE.md](ACTION_USAGE.md) for detailed documentation and examples.
 

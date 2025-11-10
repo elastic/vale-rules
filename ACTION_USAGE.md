@@ -2,9 +2,13 @@
 
 This repository provides a reusable GitHub Action that can be used by any Elastic repository to lint documentation files with Vale using the Elastic style guide.
 
-## Quick Start Linting
+## Quick start linting
 
-Create a workflow file in your repository (e.g., `.github/workflows/vale-lint.yml`):
+This action uses a two-workflow setup that supports **fork PRs** safely by separating linting from commenting. It follows the pattern recommended by [test-reporter](https://github.com/marketplace/actions/test-reporter#recommended-setup-for-public-repositories).
+
+### Step 1: Create the linting workflow
+
+Create `.github/workflows/vale-lint.yml`:
 
 ```yaml
 name: Vale Documentation Linting
@@ -15,42 +19,86 @@ on:
       - '**.md'
       - '**.adoc'
 
+permissions:
+  contents: read
+
 jobs:
   vale:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
       
-      - name: Run Elastic Vale Linter
-        uses: elastic/vale-rules@main
+      - name: Run Vale Linter
+        uses: elastic/vale-rules/action-lint.yml@main
+```
+
+### Step 2: Create the reporting workflow
+
+Create `.github/workflows/vale-report.yml`:
+
+```yaml
+name: Vale Report
+
+on:
+  workflow_run:
+    workflows: ["Vale Documentation Linting"]
+    types:
+      - completed
+
+permissions:
+  pull-requests: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.event == 'pull_request'
+    steps:
+      - name: Post Vale Results
+        uses: elastic/vale-rules/action-report.yml@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-**Note:** Using `@main` ensures you always get the latest style rules. For stability, you can pin to a specific version tag once releases are available (e.g., `@v1.0.0`).
+### Why two workflows?
+
+- **Security**: The linting workflow runs on `pull_request` (including forks) but only reads code - it never executes untrusted code.
+- **Permissions**: The reporting workflow runs on `workflow_run` in the base repository's context, so it has write permissions to post comments.
+- **Fork support**: Fork contributors get the same experience as internal contributors - linting results appear as PR comments.
+
+**Note:** Using `@main` ensures you always get the latest style rules. For stability, you can pin to a specific version tag (e.g., `@v1.0.0`).
 
 ## Inputs
 
+### action-lint.yml (Linting workflow)
+
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `github_token` | GitHub token for posting PR comments | **Yes** | N/A |
 | `files` | Files or directories to lint (space-separated). If not provided, lints changed files in PR. | No | `''` (empty, uses changed files) |
 | `fail_on_error` | Fail the action if Vale finds error-level issues | No | `false` |
 | `vale_version` | Vale version to install | No | `latest` |
 | `debug` | Enable debug output for troubleshooting | No | `false` |
 
+### action-report.yml (Reporting workflow)
+
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `github_token` | GitHub token for posting PR comments | **Yes** | N/A |
+
 ## Examples
 
 ### Basic usage (lint changed files in PR)
 
+**Linting workflow:**
 ```yaml
-- uses: elastic/vale-rules@main
+- uses: elastic/vale-rules/action-lint.yml@main
+```
+
+**Reporting workflow:**
+```yaml
+- uses: elastic/vale-rules/action-report.yml@main
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -58,34 +106,32 @@ jobs:
 ### Lint specific files or directories
 
 ```yaml
-- uses: elastic/vale-rules@main
+- uses: elastic/vale-rules/action-lint.yml@main
   with:
-    github_token: ${{ secrets.GITHUB_TOKEN }}
     files: 'docs/ README.md'
 ```
 
 ### Fail on error-level issues
 
 ```yaml
-- uses: elastic/vale-rules@main
+- uses: elastic/vale-rules/action-lint.yml@main
   with:
-    github_token: ${{ secrets.GITHUB_TOKEN }}
     fail_on_error: true
 ```
 
 ### Enable debug mode
 
 ```yaml
-- uses: elastic/vale-rules@main
+- uses: elastic/vale-rules/action-lint.yml@main
   with:
-    github_token: ${{ secrets.GITHUB_TOKEN }}
     debug: true
 ```
 
 ## Complete example
 
+**Linting workflow (`.github/workflows/vale-lint.yml`):**
 ```yaml
-name: Documentation Linting
+name: Vale Documentation Linting
 
 on:
   pull_request:
@@ -97,11 +143,10 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write  # Required for PR comments
 
 jobs:
   vale-lint:
-    name: Vale Documentation Linting
+    name: Lint Documentation
     runs-on: ubuntu-latest
     
     steps:
@@ -111,10 +156,36 @@ jobs:
           fetch-depth: 0  # Required for proper diff analysis
       
       - name: Run Vale with Elastic style guide
-        uses: elastic/vale-rules@main
+        uses: elastic/vale-rules/action-lint.yml@main
+        with:
+          fail_on_error: false
+          debug: false
+```
+
+**Reporting workflow (`.github/workflows/vale-report.yml`):**
+```yaml
+name: Vale Report
+
+on:
+  workflow_run:
+    workflows: ["Vale Documentation Linting"]
+    types:
+      - completed
+
+permissions:
+  pull-requests: write
+
+jobs:
+  report:
+    name: Post Results
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.event == 'pull_request'
+    
+    steps:
+      - name: Post Vale Results as PR Comment
+        uses: elastic/vale-rules/action-report.yml@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          fail_on_error: false
 ```
 
 ## Supported platforms
@@ -127,20 +198,33 @@ The action automatically detects the runner OS and installs Vale accordingly:
 
 ## How it works
 
-1. Validates that required dependencies are available (jq, python3, git)
-2. Detects the operating system
-3. Installs Vale if not already present
-4. Downloads the latest Elastic style guide package from this repository (includes `.vale.ini` configuration and styles)
-5. Vale automatically merges the packaged configuration settings (SkippedScopes, IgnoredScopes, TokenIgnores, etc.)
-6. Identifies files to lint (changed files in PR or specified files)
-7. Creates a temporary directory for intermediate files
-8. Gets modified line ranges from git diff
-9. Runs Vale on the files with JSON output
-10. Filters issues to only those on modified lines using the Python reporter script
-11. Generates GitHub Actions annotations for inline diff display
-12. Generates a markdown report with collapsible sections organized by severity
-13. Posts or updates a sticky comment on the PR with the results
-14. Cleans up all temporary files
+### Linting workflow (action-lint.yml)
+
+1. Validates that required dependencies are available (jq, python3, git).
+2. Detects the operating system.
+3. Installs Vale if not already present.
+4. Downloads the latest Elastic style guide package from this repository (includes `.vale.ini` configuration and styles).
+5. Vale automatically merges the packaged configuration settings (SkippedScopes, IgnoredScopes, TokenIgnores, etc.).
+6. Identifies files to lint (changed files in PR or specified files).
+7. Creates a temporary directory for intermediate files.
+8. Gets modified line ranges from git diff.
+9. Runs Vale on the files with JSON output.
+10. Filters issues to only those on modified lines using the Python reporter script.
+11. Generates GitHub Actions annotations for inline diff display.
+12. Generates a markdown report with collapsible sections organized by severity.
+13. **Uploads the report as an artifact** (available for 1 day).
+14. Cleans up all temporary files.
+
+### Reporting workflow (action-report.yml)
+
+1. Downloads the Vale results artifact from the linting workflow.
+2. Posts or updates a sticky comment on the PR with the results.
+3. Cleans up downloaded artifacts.
+
+This separation ensures that:
+- The linting workflow runs safely on fork PRs (no write permissions needed).
+- The reporting workflow runs in the base repository's context (has write permissions).
+- Fork contributors see the same results as internal contributors.
 
 ## Comment format
 
@@ -178,13 +262,21 @@ The action posts a sticky comment on your PR with collapsible sections and click
 
 ## Permissions required
 
-The action requires the following permissions:
+### Linting workflow
 
 ```yaml
 permissions:
-  contents: read           # To checkout code and read git history
-  pull-requests: write     # To post/update PR comments
+  contents: read  # To checkout code and read git history
 ```
+
+### Reporting workflow
+
+```yaml
+permissions:
+  pull-requests: write  # To post/update PR comments
+```
+
+By separating permissions, we ensure fork PRs can be linted safely without granting write access to untrusted code.
 
 ## Troubleshooting
 
@@ -232,10 +324,12 @@ This will output additional information about:
 It's recommended to pin to a specific version:
 
 ```yaml
-- uses: elastic/vale-rules@v1.0.0  # Pin to specific version
-- uses: elastic/vale-rules@v1      # Pin to v1.x.x
-- uses: elastic/vale-rules@main    # Use latest (not recommended for production)
+- uses: elastic/vale-rules/action-lint.yml@v1.0.0  # Pin to specific version
+- uses: elastic/vale-rules/action-lint.yml@v1      # Pin to v1.x.x
+- uses: elastic/vale-rules/action-lint.yml@main    # Use latest (not recommended for production)
 ```
+
+Apply the same versioning to both action-lint.yml and action-report.yml.
 
 ## Local testing
 
