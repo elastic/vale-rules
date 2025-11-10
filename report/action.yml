@@ -18,6 +18,8 @@ runs:
       uses: actions/download-artifact@v4
       with:
         name: vale-results
+        github-token: ${{ inputs.github_token }}
+        run-id: ${{ github.event.workflow_run.id }}
     
     - name: Check if results exist
       id: check-results
