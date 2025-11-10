@@ -4,6 +4,30 @@ This repo contains a set of linting rules for Vale based on the Elastic style gu
 
 ## Get started
 
+Run these commands to install the Elastic style guide locally:
+
+**macOS:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/elastic/vale-rules/main/install-macos.sh | bash
+```
+
+**Linux:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/elastic/vale-rules/main/install-linux.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/elastic/vale-rules/main/install-windows.ps1 -OutFile install-windows.ps1
+powershell -ExecutionPolicy Bypass -File .\install-windows.ps1
+```
+
+## Install the VS Code extension
+
+Install the [Vale VSCode](https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode) extension to view Vale checks when saving a document.
+
+## Add the Vale action to your repo
+
 Add the Elastic Vale linter to your repository's CI/CD pipeline using a two-workflow setup that supports fork PRs:
 
 ```yaml
@@ -24,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       
@@ -59,30 +83,6 @@ jobs:
 This two-workflow approach ensures fork PRs are linted safely while still posting results as PR comments.
 
 Refer to [ACTION_USAGE.md](ACTION_USAGE.md) for detailed documentation and examples.
-
-### Local installation
-
-Run these commands to install the Elastic style guide locally:
-
-**macOS:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/elastic/vale-rules/main/install-macos.sh | bash
-```
-
-**Linux:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/elastic/vale-rules/main/install-linux.sh | bash
-```
-
-**Windows (PowerShell):**
-```powershell
-Invoke-WebRequest -Uri https://raw.githubusercontent.com/elastic/vale-rules/main/install-windows.ps1 -OutFile install-windows.ps1
-powershell -ExecutionPolicy Bypass -File .\install-windows.ps1
-```
-
-## Install the VS Code extension
-
-Install the [Vale VSCode](https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode) extension to view Vale checks when saving a document.
 
 ## Folder structure
 
