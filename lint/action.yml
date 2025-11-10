@@ -232,8 +232,7 @@ runs:
         fi
         
         # Run the Python reporter script
-        # github.action_path points to the lint/ directory, so go up one level to find scripts/
-        python3 ${{ github.action_path }}/../scripts/vale_reporter.py
+        python3 ${{ github.action_path }}/vale_reporter.py
         
         # Set outputs from the generated counts file
         if [ -f issue_counts.txt ]; then
