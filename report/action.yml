@@ -34,12 +34,22 @@ runs:
           echo "⚠️ No Vale results found"
         fi
     
+    - name: Get PR number
+      id: pr-number
+      shell: bash
+      run: |
+        # Extract PR number from the workflow_run event
+        PR_NUMBER=$(echo '${{ toJSON(github.event.workflow_run.pull_requests) }}' | jq -r '.[0].number')
+        echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+        echo "PR number: $PR_NUMBER"
+    
     - name: Post sticky comment
-      if: steps.check-results.outputs.has_results == 'true'
+      if: steps.check-results.outputs.has_results == 'true' && steps.pr-number.outputs.pr_number != 'null'
       uses: marocchino/sticky-pull-request-comment@v2
       with:
         header: elastic-vale-results
         path: vale_report.md
+        number: ${{ steps.pr-number.outputs.pr_number }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
     
     - name: Cleanup artifacts
