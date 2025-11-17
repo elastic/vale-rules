@@ -69,6 +69,7 @@ exceptions:
   - IoAs
   - IoCs
   - IoT
+  - IP
   - IR
   - ISV
   - IT
@@ -99,6 +100,7 @@ exceptions:
   - OEM
   - OOB
   - OOTB
+  - OS
   - OSS
   - OT
   - OTel
@@ -137,6 +139,7 @@ exceptions:
   - SVG
   - TBD
   - TCP
+  - TLS
   - TODO
   - TSVB
   - TTPs
@@ -148,6 +151,7 @@ exceptions:
   - UUID
   - VDI
   - VM
+  - VPN
   - VT
   - WDE
   - XDR
