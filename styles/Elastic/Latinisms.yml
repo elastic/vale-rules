@@ -10,8 +10,9 @@ swap:
   '\b(?:ie|i\.e\.)[\s,]': that is
   'ad-hoc': if needed
   'ad hoc': if needed
-  '[\s]via[\s]': through
+  '[\s]via[\s]': using
   'vice versa': and the reverse
   '[\s]vs[\s|.]': versus
-  'etc': and so on
-  'etc\.': and so on
+  '\betc\b': and so on
+  '\betc\.\s': and so on
+  '\betc\.\)': and so on

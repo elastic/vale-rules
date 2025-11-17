@@ -14,9 +14,12 @@ swap:
   '\b(?:initialise)\b': initialize
   '\b(?:optimise)\b': optimize
   '\b(?:organise)\b': organize
+  '\b(?:prioritise)\b': prioritize
   '\b(?:realise)\b': realize
   '\b(?:recognise)\b': recognize
+  '\b(?:specialise)\b': specialize
   '\b(?:standardise)\b': standardize
+  '\b(?:utilise)\b': utilize 
   '\b(?:visualise)\b': visualize
   # -isation → -ization
   '\b(?:customisation)\b': customization
@@ -37,6 +40,11 @@ swap:
   '\b(?:catalogue)\b': catalog
   '\b(?:dialogue)\b': dialog
   '\b(?:epilogue)\b': epilog
+  # -st → /
+  '\b(?:amongst)\b': among
+  '\b(?:whilst)\b': while
   # misc
   '\b(?:grey)\b': gray
   '\b(?:programme)\b': program
+  '\b(?:towards)\b': toward
+  '\b(?:acknowledgement)\b': acknowledgment
