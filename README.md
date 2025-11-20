@@ -37,8 +37,8 @@ name: Vale Documentation Linting
 on:
   pull_request:
     paths:
-      - '**.md'
-      - '**.adoc'
+      - 'docs/**/*.md'
+      - 'docs/**/*.adoc'
 
 permissions:
   contents: read

@@ -16,8 +16,8 @@ name: Vale Documentation Linting
 on:
   pull_request:
     paths:
-      - '**.md'
-      - '**.adoc'
+      - 'docs/**/*.md'
+      - 'docs/**/*.adoc'
 
 permissions:
   contents: read
@@ -140,9 +140,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
-      - '**.md'
-      - '**.adoc'
-      - 'docs/**'
+      - 'docs/**/*.md'
+      - 'docs/**/*.adoc''
 
 permissions:
   contents: read
