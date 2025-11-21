@@ -6,7 +6,7 @@ action:
   name: replace
 swap:
   and higher: "and later"
-  lower: "earlier"
+  and lower: "and earlier"
   newer: "later"
   older: "earlier"
   or higher: "or later"
