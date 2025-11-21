@@ -145,5 +145,3 @@ Users can then install or update to this version using the installation scripts 
 ## License
 
 This software is licensed under the Apache License 2.0. Refer to the LICENSE file for details.
-
-Analyse the things aka the commas!
