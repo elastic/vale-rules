@@ -12,7 +12,6 @@ swap:
   blacklist: "blocklist"
   boot: "start, run"
   clone: "copy"
-  delete: "remove"
   disable: "deactivate, deselect, hide, turn off"
   disabled: "deactivated, deselected, hidden, turned off, unavailable"
   disables: "deactivates, deselects, hides, turns off, makes unavailable"
