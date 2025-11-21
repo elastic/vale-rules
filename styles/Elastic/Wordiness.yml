@@ -8,7 +8,7 @@ scope:
 action:
   name: replace
 swap:
-  (?:extract|take away|eliminate): remove
+  (?:take away|eliminate): remove
   (?:in order to|as a means to): to
   (?:inform|let know): tell
   (?:previous|prior) to: before
