@@ -35,19 +35,19 @@ runs:
           echo "::error::jq is not installed. Please install jq on your runner."
           exit 1
         fi
-        
+
         if ! command -v python3 &> /dev/null; then
           echo "::error::python3 is not installed. Please install Python 3 on your runner."
           exit 1
         fi
-        
+
         if ! command -v git &> /dev/null; then
           echo "::error::git is not installed. Please install git on your runner."
           exit 1
         fi
-        
+
         echo "✓ All dependencies are available"
-    
+
     - name: Detect OS
       id: detect-os
       shell: bash
@@ -59,7 +59,7 @@ runs:
         else
           echo "os=unknown" >> $GITHUB_OUTPUT
         fi
-    
+
     - name: Install Vale (macOS)
       if: steps.detect-os.outputs.os == 'macos'
       shell: bash
@@ -70,7 +70,7 @@ runs:
         else
           echo "Vale is already installed: $(vale --version)"
         fi
-    
+
     - name: Install Vale (Linux)
       if: steps.detect-os.outputs.os == 'linux'
       shell: bash
@@ -81,7 +81,7 @@ runs:
         else
           echo "Vale is already installed: $(vale --version)"
         fi
-    
+
     - name: Configure Vale with Elastic style guide
       shell: bash
       run: |
@@ -89,16 +89,16 @@ runs:
         # Vale will download the package and merge its .vale.ini automatically
         cat > .vale.ini.temp << 'EOF'
         StylesPath = .vale-styles
-        
+
         Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
         EOF
-        
+
         # Sync the Elastic style package (downloads styles and merges packaged config)
         echo "Downloading Elastic style guide..."
         vale --config=.vale.ini.temp sync
-        
+
         echo "Vale configured with Elastic style guide"
-    
+
     - name: Get changed files
       id: changed-files
       if: inputs.files == ''
@@ -107,9 +107,9 @@ runs:
         # Only get changed files if running in a PR context
         if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
           echo "Detecting changed files in PR..."
-          git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
+          git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
             | grep -E '\.(md|adoc)$' > changed_files.txt || echo "No markdown/adoc files changed"
-          
+
           if [ -s changed_files.txt ]; then
             echo "Found changed files:"
             cat changed_files.txt
@@ -122,7 +122,7 @@ runs:
           echo "Not running in PR context, no files to check"
           echo "has_changes=false" >> $GITHUB_OUTPUT
         fi
-    
+
     - name: Determine files to lint
       id: files-to-lint
       shell: bash
@@ -139,7 +139,7 @@ runs:
           echo "No files to lint"
           echo "has_files=false" >> $GITHUB_OUTPUT
         fi
-    
+
     - name: Setup temp directory
       id: setup-temp
       if: steps.files-to-lint.outputs.has_files == 'true'
@@ -149,11 +149,11 @@ runs:
         TEMP_DIR=$(mktemp -d -t vale-lint-XXXXXX)
         echo "temp_dir=$TEMP_DIR" >> $GITHUB_OUTPUT
         echo "Created temp directory: $TEMP_DIR"
-        
+
         if [ "${{ inputs.debug }}" == "true" ]; then
           echo "::debug::Temp directory created at $TEMP_DIR"
         fi
-    
+
     - name: Get modified line ranges
       id: modified-lines
       if: steps.files-to-lint.outputs.has_files == 'true' && github.event.pull_request.base.sha != ''
@@ -162,38 +162,38 @@ runs:
         TEMP_DIR: ${{ steps.setup-temp.outputs.temp_dir }}
       run: |
         echo "Getting modified line ranges for each file..."
-        
+
         # Create a file to store line ranges: filename|start_line|line_count
         > "$TEMP_DIR/line_ranges.txt"
-        
+
         while IFS= read -r file; do
           if [ -f "$file" ]; then
             # Get line ranges from git diff
-            git diff -U0 ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} "$file" \
+            git diff -U0 --diff-filter=d ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} "$file" \
               | grep '^@@' | while read -r line; do
                 # Extract start line and count from @@ -x,y +a,b @@
                 range=$(echo "$line" | sed -n 's/^@@ -[0-9,]* +\([0-9]*\),*\([0-9]*\).*/\1 \2/p')
                 start=$(echo "$range" | awk '{print $1}')
                 count=$(echo "$range" | awk '{print $2}')
-                
+
                 # If count is empty, it means only 1 line was changed
                 if [ -z "$count" ]; then
                   count=1
                 fi
-                
+
                 echo "$file|$start|$count" >> "$TEMP_DIR/line_ranges.txt"
               done
           fi
         done < files_to_lint.txt
-        
+
         if [ -s "$TEMP_DIR/line_ranges.txt" ]; then
           echo "Modified line ranges:"
           cat "$TEMP_DIR/line_ranges.txt"
-          
+
           # Copy to workspace for Python script
           cp "$TEMP_DIR/line_ranges.txt" line_ranges.txt
         fi
-    
+
     - name: Run Vale and generate report
       id: vale-report
       if: steps.files-to-lint.outputs.has_files == 'true'
@@ -207,9 +207,9 @@ runs:
           echo "::debug::Running Vale with debug mode enabled"
           set -x
         fi
-        
+
         echo "Running Vale on files..."
-        
+
         # Run Vale with JSON output on all files
         if ! vale --config=.vale.ini.temp --output=JSON $(cat files_to_lint.txt | tr '\n' ' ') > vale_output.json 2>&1; then
           # Vale exited with error, but might have found issues
@@ -217,37 +217,37 @@ runs:
             echo "::debug::Vale exited with non-zero code, checking output"
           fi
         fi
-        
+
         # Check if vale_output.json exists and is valid JSON
         if [ ! -f vale_output.json ] || ! jq empty vale_output.json 2>/dev/null; then
           echo "No issues found or Vale produced no output"
           echo "has_issues=false" >> $GITHUB_OUTPUT
           echo "error_count=0" >> $GITHUB_OUTPUT
-          
+
           # Create clean report
           echo "## ✅ Vale Linting Results" > vale_report.md
           echo "" >> vale_report.md
           echo "**No issues found on modified lines!**" >> vale_report.md
           exit 0
         fi
-        
+
         # Run the Python reporter script
         python3 ${{ github.action_path }}/vale_reporter.py
-        
+
         # Set outputs from the generated counts file
         if [ -f issue_counts.txt ]; then
           source issue_counts.txt
-          
+
           if [ $errors -gt 0 ] || [ $warnings -gt 0 ] || [ $suggestions -gt 0 ]; then
             echo "has_issues=true" >> $GITHUB_OUTPUT
           else
             echo "has_issues=false" >> $GITHUB_OUTPUT
           fi
-          
+
           echo "error_count=$errors" >> $GITHUB_OUTPUT
           echo "warning_count=$warnings" >> $GITHUB_OUTPUT
           echo "suggestion_count=$suggestions" >> $GITHUB_OUTPUT
-          
+
           if [ "${{ inputs.debug }}" == "true" ]; then
             echo "::debug::Errors: $errors, Warnings: $warnings, Suggestions: $suggestions"
           fi
@@ -256,7 +256,7 @@ runs:
           echo "has_issues=false" >> $GITHUB_OUTPUT
           echo "error_count=0" >> $GITHUB_OUTPUT
         fi
-    
+
     - name: Upload Vale results
       if: always() && steps.files-to-lint.outputs.has_files == 'true'
       uses: actions/upload-artifact@v4
@@ -266,14 +266,14 @@ runs:
           vale_report.md
           issue_counts.txt
         retention-days: 1
-    
+
     - name: Fail on errors
       if: inputs.fail_on_error == 'true' && steps.vale-report.outputs.error_count != '0'
       shell: bash
       run: |
         echo "❌ Vale found ${{ steps.vale-report.outputs.error_count }} error-level issue(s)"
         exit 1
-    
+
     - name: Cleanup
       if: always()
       shell: bash
@@ -283,7 +283,7 @@ runs:
         if [ "${{ inputs.debug }}" == "true" ]; then
           echo "::debug::Cleaning up temporary files"
         fi
-        
+
         # Clean up workspace files (keep artifacts for upload)
         rm -f .vale.ini.temp
         rm -f changed_files.txt
@@ -291,7 +291,7 @@ runs:
         rm -f vale_output.json
         rm -f line_ranges.txt
         rm -rf .vale-styles
-        
+
         # Clean up temp directory if it exists
         if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
           rm -rf "$TEMP_DIR"
@@ -299,5 +299,5 @@ runs:
             echo "::debug::Removed temp directory: $TEMP_DIR"
           fi
         fi
-        
+
         echo "✓ Cleanup complete"
