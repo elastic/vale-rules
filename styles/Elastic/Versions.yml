@@ -5,7 +5,7 @@ level: suggestion
 action:
   name: replace
 swap:
-  higher: "later"
+  and higher: "and later"
   lower: "earlier"
   newer: "later"
   older: "earlier"
