@@ -8,7 +8,7 @@ swap:
   and higher: "and later"
   and lower: "and earlier"
   and newer: "and later"
-  older: "earlier"
+  and older: "and earlier"
   or higher: "or later"
   or lower: "or earlier"
   or newer: "or later"
