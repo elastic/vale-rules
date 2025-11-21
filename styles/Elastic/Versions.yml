@@ -7,7 +7,7 @@ action:
 swap:
   and higher: "and later"
   and lower: "and earlier"
-  newer: "later"
+  and newer: "and later"
   older: "earlier"
   or higher: "or later"
   or lower: "or earlier"
