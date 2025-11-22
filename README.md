@@ -115,6 +115,51 @@ The installation scripts create Vale configurations at platform-specific locatio
 
 To update to the latest style guide rules, rerun the installation script.
 
+## Testing locally
+
+You can test Vale rules locally without creating a release. This is useful for developing and testing new rules or modifications to existing ones.
+
+### Prerequisites
+
+1. Install Vale on your system (use the installation scripts above, or install directly from [Vale's installation guide](https://vale.sh/docs/vale-cli/installation/)).
+2. Clone this repository.
+
+### Testing workflow
+
+The repository includes a `.vale.ini` configuration file at the root that points to the local `styles/` directory:
+
+```bash
+# Navigate to the repository
+cd /path/to/elastic-style-guide
+
+# Create a test Markdown file
+echo "This uses eg, instead of for example." > test.md
+
+# Run Vale using the local configuration
+vale --config=.vale.ini test.md
+```
+
+Vale immediately uses the rules from the local `styles/Elastic/` directory. Any changes you make to rule files are reflected instantly without needing to create a release.
+
+### Testing rule changes
+
+1. Edit any rule file in `styles/Elastic/`:
+
+```bash
+# Example: modify the Latinisms rule
+vim styles/Elastic/Latinisms.yml
+```
+
+2. Run Vale against a test file:
+
+```bash
+vale --config=.vale.ini your-test-file.md
+```
+
+3. Iterate on your changes until the rule works as expected.
+
+The local `.vale.ini` configuration uses `StylesPath = styles`, which points directly to the local directory, so there's no need for releases or package syncing during development.
+
 ## Creating releases
 
 To create a new release of the Vale package:
