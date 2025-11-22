@@ -1,8 +1,13 @@
-extends: existence
+extends: sequence
 message: "Don't use apostrophes when making abbreviations plural. Use '%s' instead of '%s'."
 level: warning
-ignorecase: false
-nonword: true
 tokens:
-- \b([A-Z]{2,})('s)\b
-- \b([A-Z]{2,})('es)\b
+  # Match an acronym (2+ uppercase letters)
+  - pattern: '\b[A-Z]{2,}'
+  # Followed by 's
+  - pattern: "'s"
+  # NOT followed by a noun (NN, NNS, NNP, NNPS)
+  # If a noun follows, it's likely possessive (correct usage)
+  # If no noun follows, it's likely incorrect plural usage
+  - tag: NN|NNS|NNP|NNPS
+    negate: true
