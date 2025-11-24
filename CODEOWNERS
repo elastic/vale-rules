@@ -1,0 +1,15 @@
+# Code owners for elastic-style-guide
+
+# Install scripts
+/install-linux.sh @theletterf
+/install-macos.sh @theletterf
+/install-windows.ps1 @theletterf
+
+# Lint, report, and scripts folders
+/lint/ @theletterf
+/report/ @theletterf
+/scripts/ @theletterf
+
+# Styles folder
+/styles/ @jmikell821 @natasha-moore-elastic @yetanothertw @theletterf
+
