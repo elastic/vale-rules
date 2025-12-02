@@ -5,7 +5,7 @@ level: suggestion
 ignorecase: false
 scope: text
 first: '\b([A-Z]{3,5})\b'
-second: '(?:\b[A-Z][a-z]+ )+\(([A-Z]{3,5})\)'
+second: '(?:\b[A-Za-z][a-z]*(?:-[a-z]+)* )+\(([A-Z]{3,5})\)'
 exceptions:
   - ABAC
   - AD
