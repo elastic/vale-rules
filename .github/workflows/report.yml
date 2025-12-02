@@ -7,7 +7,7 @@ on:
       - completed
 
 permissions:
-  pull-requests: write
+  pull-requests: none
 
 jobs:
   report:
@@ -15,7 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     # Only run if the workflow was triggered by a pull_request event (not push to main)
     if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'cancelled'
-    
+    permissions:
+      pull-requests: write
     steps:
       - name: Debug workflow_run event
         run: |
@@ -27,7 +28,7 @@ jobs:
           echo "PR numbers: ${{ toJSON(github.event.workflow_run.pull_requests) }}"
       
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
       - name: Post Vale Results
         uses: ./report
