@@ -7,7 +7,7 @@ on:
   workflow_dispatch:  # Allows manual triggering from GitHub Actions UI
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   release:
