@@ -7,8 +7,6 @@ updates:
       interval: 'weekly'
       day: 'sunday'
       time: '22:00'
-    labels:
-      - 'changelog:dependencies'
     groups:
       github-actions:
         patterns:
