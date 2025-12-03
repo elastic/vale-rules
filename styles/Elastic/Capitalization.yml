@@ -10,7 +10,7 @@ indicators:
 # Allow some flexibility for edge cases
 threshold: 0.8
 exceptions:
-  - (?:[A-Z]{2,}) # Ignore acronyms
+  - (?:[A-Z_]{2,}) # Ignore acronyms
   - Advanced Settings
   - Agent
   - Analytics
