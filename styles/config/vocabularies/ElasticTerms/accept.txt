@@ -1,0 +1,121 @@
+(?i)Agent
+(?i)Analytics
+(?i)Canvas
+(?i)Cloud
+(?i)Console
+(?i)Dashboard
+(?i)Discover
+(?i)Discuss
+(?i)Endpoint
+(?i)Forwarder
+(?i)Graph
+(?i)Labs
+(?i)Machine Learning
+(?i)Maps
+(?i)Observability
+(?i)Real User Monitoring
+(?i)Rules
+(?i)Security
+(?i)Self-managed
+(?i)Serverless
+(?i)Spaces
+(?i)Uptime
+(?i)User Experience
+APM
+APM .NET Agent
+APM Agent
+APM Attacher for Kubernetes
+APM AWS Lambda extension
+APM Go Agent
+APM Java Agent
+APM Node.js Agent
+APM PHP Agent
+APM Python Agent
+APM Ruby Agent
+APM RUM JavaScript Agent
+APM Server
+Auditbeat
+Beats
+Cloud UI
+ECS Logging
+ECS Logging .NET
+ECS Logging Go (Logrus)
+ECS Logging Go (Zap)
+ECS Logging Go (Zerolog)
+ECS Logging Java
+ECS Logging Node.js
+ECS Logging PHP
+ECS Logging Python
+ECS Logging Ruby
+EDOT Cloud Forwarder
+EDOT Cloud Forwarder for AWS
+EDOT Cloud Forwarder for Azure
+Eland
+Elastic
+Elastic Agent
+Elastic Cloud
+Elastic Cloud Control
+Elastic Cloud Enterprise
+Elastic Cloud Hosted
+Elastic Cloud on Kubernetes
+Elastic Cloud Serverless
+Elastic Cloud Terraform Provider
+Elastic Common Schema
+Elastic Distribution
+Elastic Distribution of OpenTelemetry
+Elastic Distribution of OpenTelemetry .NET
+Elastic Distribution of OpenTelemetry Android
+Elastic Distribution of OpenTelemetry Collector
+Elastic Distribution of OpenTelemetry iOS
+Elastic Distribution of OpenTelemetry Java
+Elastic Distribution of OpenTelemetry Node
+Elastic Distribution of OpenTelemetry PHP
+Elastic Distribution of OpenTelemetry Python
+Elastic Distribution of OpenTelemetry SDK
+Elastic Distributions
+Elastic Distributions of OpenTelemetry
+Elastic integrations
+Elastic Kubernetes Service
+Elastic Maps Service
+Elastic Observability
+Elastic Observability Serverless
+Elastic Package Registry
+Elastic Security
+Elastic Security Serverless
+Elastic Serverless Forwarder
+Elastic Stack
+Elasticsearch
+Elasticsearch Client
+Elasticsearch Curator
+Elasticsearch Serverless
+Elasticsearch Service
+Enterprise Search
+Event Query Language
+Feature Controls
+Filebeat
+Fleet
+Fleet Server
+Grok Debugger
+Heartbeat
+Kibana
+Kibana Query Language
+Lens
+Logstash
+Metricbeat
+Packetbeat
+Painless
+Painless Lab
+QoS
+Query Profiler
+Search AI
+Search UI
+Self-managed Elastic
+Stack Management
+Stack Monitoring
+Timelion
+Universal Profiling
+Upgrade Assistant
+Vega
+Watcher
+Web Map Service
+Winlogbeat
