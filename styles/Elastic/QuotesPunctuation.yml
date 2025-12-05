@@ -1,5 +1,6 @@
 extends: existence
 message: 'Put punctuation outside the quotation marks.'
+link: https://www.elastic.co/docs/contribute-docs/style-guide/grammar-spelling#punctuation
 level: warning
 nonword: true
 tokens:

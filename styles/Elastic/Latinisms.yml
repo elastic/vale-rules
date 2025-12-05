@@ -1,5 +1,6 @@
 extends: substitution
 message: "Latin terms and abbreviations are a common source of confusion. Use '%s' instead of '%s'."
+link: https://www.elastic.co/docs/contribute-docs/style-guide/grammar-spelling#latin-abbreviations
 ignorecase: true
 level: warning
 action:

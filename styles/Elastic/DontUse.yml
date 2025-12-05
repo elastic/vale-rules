@@ -1,6 +1,6 @@
 extends: existence
 message: "Don't use '%s'."
-link: https://stunning-adventure-qrvr1k2.pages.github.io/tech-writing-guidelines/voice-tone
+link: https://www.elastic.co/docs/contribute-docs/style-guide/word-choice
 ignorecase: true
 level: warning
 tokens:

@@ -1,6 +1,6 @@
 extends: existence
 message: "Don't put a space before or after a dash."
-link: "https://stunning-adventure-qrvr1k2.pages.github.io/tech-writing-guidelines/grammar-spelling"
+link: https://www.elastic.co/docs/contribute-docs/style-guide/grammar-spelling#em-dashes
 nonword: true
 level: suggestion
 action:
