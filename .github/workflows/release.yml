@@ -51,38 +51,7 @@ jobs:
         with:
           tag_name: ${{ steps.get_version.outputs.VERSION }}
           name: Release ${{ steps.get_version.outputs.VERSION }}
-          body: |
-            Vale style guide package for Elastic documentation.
-            
-            This is a complete package containing the `.vale.ini` configuration file and the `Elastic` style with all style rules.
-            
-            ## Installation
-            
-            ### Option 1: Use as a package (recommended)
-            
-            Add the following to your project's `.vale.ini` file:
-            
-            ```ini
-            Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
-            ```
-            
-            Then run:
-            
-            ```bash
-            vale sync
-            ```
-            
-            The Elastic configuration and styles will be automatically downloaded and merged with your local setup.
-            
-            ### Option 2: Manual installation
-            
-            1. Download and extract `elastic-vale.zip`
-            2. Use the included `.vale.ini` as a reference or starting point for your configuration
-            3. Copy the `styles/Elastic/` folder to your Vale `StylesPath`
-            
-            ### Option 3: Use installation scripts
-            
-            For global installation, use our platform-specific scripts from the repository.
+          generate_release_notes: true
           draft: false
           prerelease: false
           files: elastic-vale.zip
