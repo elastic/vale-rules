@@ -1,5 +1,6 @@
 extends: substitution
 message: "Use American English spelling '%s' instead of British English '%s'."
+link: https://www.elastic.co/docs/contribute-docs/style-guide/grammar-spelling#american-english
 level: warning
 ignorecase: true
 action:

@@ -1,5 +1,6 @@
 extends: existence
 message: "'%s' might be in future tense. Write in the present tense to describe the state of the product as it is now."
+link: https://www.elastic.co/docs/contribute-docs/style-guide/grammar-spelling#verb-tense
 ignorecase: true
 level: suggestion
 raw:

@@ -1,5 +1,6 @@
 extends: sequence
 message: "Don't use apostrophes when making abbreviations plural. Use '%s' instead of '%s'."
+link: https://www.elastic.co/docs/contribute-docs/style-guide/grammar-spelling#making-abbreviations-plural
 level: warning
 tokens:
   # Match an acronym (2+ uppercase letters)

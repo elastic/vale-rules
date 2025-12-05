@@ -1,6 +1,6 @@
 extends: substitution
 message: "Consider using '%s' instead of '%s', unless the term is in the UI."
-link: https://stunning-adventure-qrvr1k2.pages.github.io/style-guide/word-choice/
+link: https://www.elastic.co/docs/contribute-docs/style-guide/word-choice
 ignorecase: true
 level: suggestion
 action:
