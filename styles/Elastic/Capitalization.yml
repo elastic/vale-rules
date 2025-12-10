@@ -12,7 +12,6 @@ threshold: 0.8
 exceptions:
   - (?:[A-Z_]{2,}) # Ignore acronyms
   - Advanced Settings
-  - Code
   - GeoJSON
   - Labs
   - Managed
