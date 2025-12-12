@@ -8,13 +8,21 @@ branding:
 
 inputs:
   github_token:
+    default: ${{ github.token }}
+    type: string
     description: 'GitHub token for posting PR comments'
-    required: true
+    required: false
+  download_artifacts:
+    description: 'Whether to download Vale results from artifacts from the linting workflow'
+    type: boolean
+    default: true
+    required: false
 
 runs:
   using: 'composite'
   steps:
     - name: Download Vale results
+      if: inputs.download_artifacts == true
       uses: dawidd6/action-download-artifact@ac66b43f0e6a346234dd65d4d0c8fbb31cb316e5 # v11
       with:
         name: vale-results
