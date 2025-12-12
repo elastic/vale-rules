@@ -142,12 +142,32 @@ runs:
           echo "has_files=false" >> $GITHUB_OUTPUT
         fi
 
-    - name: Create clean report for no-files case
+    - name: Check for deleted documentation files
+      id: deleted-files
       if: steps.files-to-lint.outputs.has_files == 'false' && github.event.pull_request.base.sha != ''
       shell: bash
       run: |
-        # When there are no files to lint (e.g., all linted files were deleted),
-        # we still need to upload a clean report so the sticky comment gets updated.
+        # Check if any markdown/adoc files were deleted in this PR.
+        # We only want to create a clean report if files that were previously
+        # linted have been removed (to update the sticky comment).
+        DELETED_DOCS=$(git diff --name-only --diff-filter=D ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
+          | grep -E '\.(md|adoc)$' || true)
+
+        if [ -n "$DELETED_DOCS" ]; then
+          echo "Documentation files were deleted:"
+          echo "$DELETED_DOCS"
+          echo "has_deleted_docs=true" >> $GITHUB_OUTPUT
+        else
+          echo "No documentation files were deleted"
+          echo "has_deleted_docs=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create clean report for deleted-files case
+      if: steps.deleted-files.outputs.has_deleted_docs == 'true'
+      shell: bash
+      run: |
+        # When all linted files were deleted, we still need to upload a clean
+        # report so the sticky comment gets updated.
         echo "## ✅ Vale Linting Results" > vale_report.md
         echo "" >> vale_report.md
         echo "**No documentation files to lint in this PR.**" >> vale_report.md
@@ -156,7 +176,7 @@ runs:
         echo "warnings=0" >> issue_counts.txt
         echo "suggestions=0" >> issue_counts.txt
 
-        echo "Created clean report for no-files case"
+        echo "Created clean report for deleted-files case"
 
     - name: Setup temp directory
       id: setup-temp
@@ -278,7 +298,7 @@ runs:
         fi
 
     - name: Upload Vale results
-      if: always() && (steps.files-to-lint.outputs.has_files == 'true' || github.event.pull_request.base.sha != '')
+      if: always() && (steps.files-to-lint.outputs.has_files == 'true' || steps.deleted-files.outputs.has_deleted_docs == 'true')
       uses: actions/upload-artifact@v5
       with:
         name: vale-results
