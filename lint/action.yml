@@ -142,6 +142,22 @@ runs:
           echo "has_files=false" >> $GITHUB_OUTPUT
         fi
 
+    - name: Create clean report for no-files case
+      if: steps.files-to-lint.outputs.has_files == 'false' && github.event.pull_request.base.sha != ''
+      shell: bash
+      run: |
+        # When there are no files to lint (e.g., all linted files were deleted),
+        # we still need to upload a clean report so the sticky comment gets updated.
+        echo "## ✅ Vale Linting Results" > vale_report.md
+        echo "" >> vale_report.md
+        echo "**No documentation files to lint in this PR.**" >> vale_report.md
+
+        echo "errors=0" > issue_counts.txt
+        echo "warnings=0" >> issue_counts.txt
+        echo "suggestions=0" >> issue_counts.txt
+
+        echo "Created clean report for no-files case"
+
     - name: Setup temp directory
       id: setup-temp
       if: steps.files-to-lint.outputs.has_files == 'true'
@@ -262,7 +278,7 @@ runs:
         fi
 
     - name: Upload Vale results
-      if: always() && steps.files-to-lint.outputs.has_files == 'true'
+      if: always() && (steps.files-to-lint.outputs.has_files == 'true' || github.event.pull_request.base.sha != '')
       uses: actions/upload-artifact@v5
       with:
         name: vale-results
@@ -270,9 +286,10 @@ runs:
           vale_report.md
           issue_counts.txt
         retention-days: 1
+        if-no-files-found: ignore
 
     - name: Fail on errors
-      if: inputs.fail_on_error == 'true' && steps.vale-report.outputs.error_count != '0'
+      if: inputs.fail_on_error == 'true' && steps.vale-report.outputs.error_count != '' && steps.vale-report.outputs.error_count != '0'
       shell: bash
       run: |
         echo "❌ Vale found ${{ steps.vale-report.outputs.error_count }} error-level issue(s)"
