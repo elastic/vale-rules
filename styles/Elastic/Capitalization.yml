@@ -11,6 +11,7 @@ indicators:
 threshold: 0.8
 exceptions:
   - (?:[A-Z_]{2,}) # Ignore acronyms
+  - (?:\w+(?:-\w+)+) # Ignore hyphenated words (e.g., cross-encoder, state-of-the-art)
   - Advanced Settings
   - GeoJSON
   - Labs
