@@ -217,9 +217,18 @@ Set-Content -Path $valeConfigFile -Value $configContent -Encoding UTF8
 Write-Success "[OK] Vale configuration created at: $valeConfigFile"
 
 # 7. Download and install Elastic style package
+# Remove existing Elastic styles to force re-download (vale sync doesn't have a --force flag)
+if (Test-Path "$valeStylesDir\Elastic") {
+    Write-Info "Removing existing Elastic styles to ensure latest version..."
+    Remove-Item -Path "$valeStylesDir\Elastic" -Recurse -Force
+    if (Test-Path "$valeStylesDir\.vale-config") {
+        Remove-Item -Path "$valeStylesDir\.vale-config" -Recurse -Force
+    }
+}
+
 Write-Info "Downloading and installing Elastic style package..."
 try {
-    & vale --config="$valeConfigFile" sync --clean --force
+    & vale --config="$valeConfigFile" sync
     Write-Success "[OK] Elastic styles package downloaded and installed successfully"
 }
 catch {
@@ -272,7 +281,7 @@ Write-Host ""
 Write-Host "Configuration file location: $valeConfigFile"
 Write-Host "Styles installed to: $valeStylesDir\Elastic"
 Write-Host ""
-Write-Host "To update the styles in the future:"
-Write-Host "  - Re-run this script, or"
-Write-Host "  - Run 'vale sync --clean --force' to update to the latest package"
+Write-Host "To update the styles in the future, re-run this script or run:"
+Write-Host "  Remove-Item -Path '$valeStylesDir\Elastic','$valeStylesDir\.vale-config' -Recurse -Force"
+Write-Host "  vale --config='$valeConfigFile' sync"
 

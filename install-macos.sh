@@ -133,8 +133,15 @@ EOF
 print_success "✓ Vale configuration created at: $VALE_CONFIG_FILE"
 
 # 6. Download and install Elastic style package
+# Remove existing Elastic styles to force re-download (vale sync doesn't have a --force flag)
+if [ -d "$VALE_STYLES_DIR/Elastic" ]; then
+    print_info "Removing existing Elastic styles to ensure latest version..."
+    rm -rf "$VALE_STYLES_DIR/Elastic"
+    rm -rf "$VALE_STYLES_DIR/.vale-config"
+fi
+
 print_info "Downloading and installing Elastic style package..."
-if vale --config="$VALE_CONFIG_FILE" sync --clean --force; then
+if vale --config="$VALE_CONFIG_FILE" sync; then
     print_success "✓ Elastic styles package downloaded and installed successfully"
 else
     print_error "Failed to sync Vale styles package"
@@ -180,6 +187,6 @@ echo
 echo "Configuration file location: $VALE_CONFIG_FILE"
 echo "Styles installed to: $VALE_STYLES_DIR/Elastic"
 echo
-echo "To update the styles in the future:"
-echo "  • Re-run this script, or"
-echo "  • Run 'vale --config=\"$VALE_CONFIG_FILE\" sync --clean --force' to update to the latest package"
+echo "To update the styles in the future, re-run this script or run:"
+echo "  rm -rf \"$VALE_STYLES_DIR/Elastic\" \"$VALE_STYLES_DIR/.vale-config\""
+echo "  vale --config=\"$VALE_CONFIG_FILE\" sync"
