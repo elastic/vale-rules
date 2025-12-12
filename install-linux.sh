@@ -140,7 +140,7 @@ print_success "✓ Vale configuration created at: $VALE_CONFIG_FILE"
 
 # 7. Download and install Elastic style package
 print_info "Downloading and installing Elastic style package..."
-if vale --config="$VALE_CONFIG_FILE" sync --clean; then
+if vale --config="$VALE_CONFIG_FILE" sync --clean --force; then
     print_success "✓ Elastic styles package downloaded and installed successfully"
 else
     print_error "Failed to sync Vale styles package"
@@ -188,5 +188,5 @@ echo "Styles installed to: $VALE_STYLES_DIR/Elastic"
 echo
 echo "To update the styles in the future:"
 echo "  • Re-run this script, or"
-echo "  • Run 'vale --config=\"$VALE_CONFIG_FILE\" sync --clean' to update to the latest package"
+echo "  • Run 'vale --config=\"$VALE_CONFIG_FILE\" sync --clean --force' to update to the latest package"
 

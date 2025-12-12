@@ -219,7 +219,7 @@ Write-Success "[OK] Vale configuration created at: $valeConfigFile"
 # 7. Download and install Elastic style package
 Write-Info "Downloading and installing Elastic style package..."
 try {
-    & vale --config="$valeConfigFile" sync --clean
+    & vale --config="$valeConfigFile" sync --clean --force
     Write-Success "[OK] Elastic styles package downloaded and installed successfully"
 }
 catch {
@@ -274,5 +274,5 @@ Write-Host "Styles installed to: $valeStylesDir\Elastic"
 Write-Host ""
 Write-Host "To update the styles in the future:"
 Write-Host "  - Re-run this script, or"
-Write-Host "  - Run 'vale sync --clean' to update to the latest package"
+Write-Host "  - Run 'vale sync --clean --force' to update to the latest package"
 
