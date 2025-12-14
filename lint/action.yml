@@ -263,7 +263,7 @@ runs:
 
     - name: Upload Vale results
       if: always() && steps.files-to-lint.outputs.has_files == 'true'
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: vale-results
         path: |
