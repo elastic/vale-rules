@@ -141,9 +141,14 @@ def filter_issues_to_modified_lines(
         if stats['unmatched_files']:
             print(f"::debug::  - Unmatched files from Vale: {stats['unmatched_files']}", file=sys.stderr)
     
-    # Warn if all issues were filtered out
+    # Provide context when all issues were filtered out
     if stats['total_issues'] > 0 and stats['kept'] == 0:
-        print("::warning::All Vale issues were filtered out. This may indicate a path mismatch between Vale output and git diff.", file=sys.stderr)
+        if stats['filtered_no_file_match'] > 0:
+            # Genuine concern: Vale reported files that weren't in the diff
+            print("::warning::All Vale issues were filtered out. Some files from Vale output didn't match git diff paths.", file=sys.stderr)
+        else:
+            # Expected behavior: issues exist but are on unmodified lines
+            print(f"::notice::Found {stats['total_issues']} Vale issue(s) in the codebase, but none on modified lines.", file=sys.stderr)
     
     return filtered_issues
 
