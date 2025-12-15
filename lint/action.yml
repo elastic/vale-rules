@@ -176,8 +176,10 @@ runs:
         while IFS= read -r file; do
           if [ -f "$file" ]; then
             # Get line ranges from git diff
-            git diff -U0 --diff-filter=d ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} "$file" \
-              | grep '^@@' | while read -r line; do
+            # Note: Use { grep ... || true; } to handle files with no @@ hunks (e.g., binary files)
+            # Without this, grep returns exit code 1 when no matches, failing the pipeline with pipefail
+            git diff -U0 --diff-filter=d ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} "$file" 2>/dev/null \
+              | { grep '^@@' || true; } | while read -r line; do
                 # Extract start line and count from @@ -x,y +a,b @@
                 range=$(echo "$line" | sed -n 's/^@@ -[0-9,]* +\([0-9]*\),*\([0-9]*\).*/\1 \2/p')
                 start=$(echo "$range" | awk '{print $1}')
