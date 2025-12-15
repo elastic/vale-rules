@@ -95,7 +95,10 @@ runs:
 
         # Sync the Elastic style package (downloads styles and merges packaged config)
         echo "Downloading Elastic style guide..."
-        vale --config=.vale.ini.temp sync
+        if ! vale --config=.vale.ini.temp sync 2>&1; then
+          echo "::error::Vale sync failed. Check if the package URL is accessible: https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip"
+          exit 1
+        fi
 
         echo "Vale configured with Elastic style guide"
 

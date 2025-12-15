@@ -10,7 +10,7 @@ import json
 import sys
 import os
 import hashlib
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple
 
 
 def load_vale_output(file_path: str) -> Dict:
@@ -26,11 +26,19 @@ def load_vale_output(file_path: str) -> Dict:
         return {}
 
 
-def load_modified_ranges(file_path: str) -> Dict[str, List[Tuple[int, int]]]:
+def normalize_path(path: str) -> str:
+    """Normalize file path for consistent matching."""
+    # Remove leading ./ and normalize path separators
+    return path.lstrip('./').replace('\\', '/')
+
+
+def load_modified_ranges(file_path: str, debug: bool = False) -> Dict[str, List[Tuple[int, int]]]:
     """Load modified line ranges from git diff output."""
     modified_ranges = {}
     
     if not os.path.exists(file_path):
+        if debug:
+            print(f"::debug::Modified ranges file not found: {file_path}", file=sys.stderr)
         return modified_ranges
     
     try:
@@ -39,49 +47,103 @@ def load_modified_ranges(file_path: str) -> Dict[str, List[Tuple[int, int]]]:
                 parts = line.strip().split('|')
                 if len(parts) == 3:
                     file, start, count = parts
-                    if file not in modified_ranges:
-                        modified_ranges[file] = []
+                    # Normalize the file path for consistent matching
+                    normalized_file = normalize_path(file)
+                    if normalized_file not in modified_ranges:
+                        modified_ranges[normalized_file] = []
                     start_line = int(start)
-                    end_line = start_line + int(count)
-                    modified_ranges[file].append((start_line, end_line))
+                    # Ensure at least 1 line in range (count=0 edge case)
+                    line_count = max(1, int(count)) if count else 1
+                    end_line = start_line + line_count
+                    modified_ranges[normalized_file].append((start_line, end_line))
+                    if debug:
+                        print(f"::debug::Modified range: {normalized_file} lines {start_line}-{end_line}", file=sys.stderr)
     except (IOError, ValueError) as e:
         print(f"::warning::Failed to load modified line ranges: {e}", file=sys.stderr)
+    
+    if debug:
+        print(f"::debug::Total files with modified ranges: {len(modified_ranges)}", file=sys.stderr)
     
     return modified_ranges
 
 
 def filter_issues_to_modified_lines(
     vale_data: Dict,
-    modified_ranges: Dict[str, List[Tuple[int, int]]]
+    modified_ranges: Dict[str, List[Tuple[int, int]]],
+    debug: bool = False
 ) -> Dict[str, List[Dict]]:
     """Filter Vale issues to only those on modified lines."""
     filtered_issues = {'error': [], 'warning': [], 'suggestion': []}
     
+    # Track statistics for debugging
+    stats = {
+        'total_issues': 0,
+        'filtered_no_file_match': 0,
+        'filtered_no_line_match': 0,
+        'kept': 0,
+        'unmatched_files': set()
+    }
+    
+    if debug:
+        print(f"::debug::Vale found issues in {len(vale_data)} files", file=sys.stderr)
+        print(f"::debug::Modified ranges available for {len(modified_ranges)} files", file=sys.stderr)
+        if modified_ranges:
+            print(f"::debug::Modified files: {list(modified_ranges.keys())}", file=sys.stderr)
+    
     for file, issues in vale_data.items():
+        # Normalize the file path from Vale output for matching
+        normalized_file = normalize_path(file)
+        
+        if debug:
+            print(f"::debug::Processing Vale file: '{file}' (normalized: '{normalized_file}')", file=sys.stderr)
+        
         for issue in issues:
+            stats['total_issues'] += 1
             line_num = issue.get('Line', 0)
             
             # If we have modified ranges, check if this line is modified
             if modified_ranges:
-                if file in modified_ranges:
-                    is_modified = any(start <= line_num < end for start, end in modified_ranges[file])
+                if normalized_file in modified_ranges:
+                    ranges = modified_ranges[normalized_file]
+                    is_modified = any(start <= line_num <= end for start, end in ranges)
                     if not is_modified:
+                        stats['filtered_no_line_match'] += 1
+                        if debug:
+                            print(f"::debug::  Filtered: line {line_num} not in ranges {ranges}", file=sys.stderr)
                         continue
                 else:
                     # File not in modified ranges, skip
+                    stats['filtered_no_file_match'] += 1
+                    stats['unmatched_files'].add(normalized_file)
                     continue
+            
+            stats['kept'] += 1
             
             # Categorize by severity
             severity = issue.get('Severity', 'suggestion').lower()
             if severity not in filtered_issues:
                 severity = 'suggestion'
             
+            # Use original file path for display (not normalized)
             filtered_issues[severity].append({
                 'file': file,
                 'line': line_num,
                 'rule': issue.get('Check', 'Unknown'),
                 'message': issue.get('Message', '')
             })
+    
+    # Log filtering summary
+    if debug or (stats['total_issues'] > 0 and stats['kept'] == 0):
+        print(f"::debug::Filtering summary: {stats['total_issues']} total issues", file=sys.stderr)
+        print(f"::debug::  - Kept: {stats['kept']}", file=sys.stderr)
+        print(f"::debug::  - Filtered (file not in diff): {stats['filtered_no_file_match']}", file=sys.stderr)
+        print(f"::debug::  - Filtered (line not in range): {stats['filtered_no_line_match']}", file=sys.stderr)
+        if stats['unmatched_files']:
+            print(f"::debug::  - Unmatched files from Vale: {stats['unmatched_files']}", file=sys.stderr)
+    
+    # Warn if all issues were filtered out
+    if stats['total_issues'] > 0 and stats['kept'] == 0:
+        print("::warning::All Vale issues were filtered out. This may indicate a path mismatch between Vale output and git diff.", file=sys.stderr)
     
     return filtered_issues
 
@@ -215,20 +277,26 @@ def main():
     if not vale_data:
         print("No Vale issues found or empty output")
         # Create empty report
-        with open('vale_report.md', 'w', encoding='utf-8') as f:
-            f.write("## ✅ Vale Linting Results\n\n**No issues found on modified lines!**\n")
-        with open('issue_counts.txt', 'w', encoding='utf-8') as f:
-            f.write("errors=0\nwarnings=0\nsuggestions=0\n")
+        try:
+            with open('vale_report.md', 'w', encoding='utf-8') as f:
+                f.write("## ✅ Vale Linting Results\n\n**No issues found on modified lines!**\n")
+            with open('issue_counts.txt', 'w', encoding='utf-8') as f:
+                f.write("errors=0\nwarnings=0\nsuggestions=0\n")
+        except IOError as e:
+            print(f"::error::Failed to write output files: {e}", file=sys.stderr)
+            sys.exit(1)
         return
     
     # Load modified line ranges
-    modified_ranges = load_modified_ranges('line_ranges.txt')
+    modified_ranges = load_modified_ranges('line_ranges.txt', debug=debug)
     
-    if debug and modified_ranges:
-        print(f"::debug::Loaded {len(modified_ranges)} files with modified ranges", file=sys.stderr)
+    # Count total issues from Vale
+    total_vale_issues = sum(len(issues) for issues in vale_data.values())
+    if debug:
+        print(f"::debug::Vale reported {total_vale_issues} total issues across {len(vale_data)} files", file=sys.stderr)
     
     # Filter issues to modified lines only
-    filtered_issues = filter_issues_to_modified_lines(vale_data, modified_ranges)
+    filtered_issues = filter_issues_to_modified_lines(vale_data, modified_ranges, debug=debug)
     
     # Generate GitHub Actions annotations
     generate_github_annotations(filtered_issues)
@@ -242,10 +310,14 @@ def main():
     )
     
     # Write counts for shell script
-    with open('issue_counts.txt', 'w', encoding='utf-8') as f:
-        f.write(f"errors={error_count}\n")
-        f.write(f"warnings={warning_count}\n")
-        f.write(f"suggestions={suggestion_count}\n")
+    try:
+        with open('issue_counts.txt', 'w', encoding='utf-8') as f:
+            f.write(f"errors={error_count}\n")
+            f.write(f"warnings={warning_count}\n")
+            f.write(f"suggestions={suggestion_count}\n")
+    except IOError as e:
+        print(f"::error::Failed to write issue counts: {e}", file=sys.stderr)
+        sys.exit(1)
     
     total_count = error_count + warning_count + suggestion_count
     print(f"Generated report with {total_count} issue(s): {error_count} errors, {warning_count} warnings, {suggestion_count} suggestions")
