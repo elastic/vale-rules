@@ -213,16 +213,46 @@ runs:
         fi
 
         echo "Running Vale on files..."
-
-        # Run Vale with JSON output on all files
-        if ! vale --config=.vale.ini.temp --output=JSON $(cat files_to_lint.txt | tr '\n' ' ') > vale_output.json 2>&1; then
-          # Vale exited with error, but might have found issues
-          if [ "${DEBUG}" == "true" ]; then
-            echo "::debug::Vale exited with non-zero code, checking output"
-          fi
+        
+        # Show files to lint
+        echo "Files to lint:"
+        cat files_to_lint.txt
+        
+        # Verify Vale config exists
+        if [ ! -f .vale.ini.temp ]; then
+          echo "::error::Vale config file .vale.ini.temp not found"
+          exit 1
+        fi
+        
+        # Verify styles were downloaded
+        if [ ! -d .vale-styles ]; then
+          echo "::error::Vale styles directory .vale-styles not found. Vale sync may have failed."
+          exit 1
         fi
 
+        # Run Vale with JSON output on all files
+        # Capture stderr separately to avoid corrupting JSON output
+        VALE_STDERR=$(mktemp)
+        VALE_EXIT=0
+        vale --config=.vale.ini.temp --output=JSON $(cat files_to_lint.txt | tr '\n' ' ') > vale_output.json 2>"$VALE_STDERR" || VALE_EXIT=$?
+        
+        if [ $VALE_EXIT -ne 0 ]; then
+          echo "Vale exited with code $VALE_EXIT"
+          if [ -s "$VALE_STDERR" ]; then
+            echo "Vale stderr output:"
+            cat "$VALE_STDERR"
+          fi
+        fi
+        rm -f "$VALE_STDERR"
+
         # Check if vale_output.json exists and is valid JSON
+        if [ ! -f vale_output.json ]; then
+          echo "::warning::vale_output.json was not created"
+        elif ! jq empty vale_output.json 2>/dev/null; then
+          echo "::warning::vale_output.json is not valid JSON. Contents:"
+          head -20 vale_output.json
+        fi
+        
         if [ ! -f vale_output.json ] || ! jq empty vale_output.json 2>/dev/null; then
           echo "No issues found or Vale produced no output"
           echo "has_issues=false" >> $GITHUB_OUTPUT
@@ -232,10 +262,16 @@ runs:
           echo "## ✅ Vale Linting Results" > vale_report.md
           echo "" >> vale_report.md
           echo "**No issues found on modified lines!**" >> vale_report.md
+          
+          # Also create issue_counts.txt for artifact upload
+          echo "errors=0" > issue_counts.txt
+          echo "warnings=0" >> issue_counts.txt
+          echo "suggestions=0" >> issue_counts.txt
           exit 0
         fi
 
         # Run the Python reporter script
+        echo "Running vale_reporter.py..."
         python3 ${{ github.action_path }}/vale_reporter.py
 
         # Set outputs from the generated counts file
