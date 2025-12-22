@@ -162,7 +162,23 @@ The local `.vale.ini` configuration uses `StylesPath = styles`, which points dir
 
 ## Creating releases
 
-To create a new release of the Vale package:
+To create a new release of the Vale package, you have two options:
+
+### Option 1: Manual workflow dispatch (recommended)
+
+1. Go to the [Actions tab](https://github.com/elastic/vale-rules/actions/workflows/release.yml) in GitHub
+2. Click "Run workflow"
+3. Enter the version number (e.g., `v1.0.1`)
+4. Click "Run workflow"
+
+The GitHub workflow will automatically:
+- Create and push a git tag with the specified version
+- Add a VERSION file to the Elastic style directory
+- Package the `.vale.ini` and `styles/` folder into `elastic-vale.zip` (a Vale complete package)
+- Create a new GitHub release with the version tag
+- Upload the package as a release asset
+
+### Option 2: Push a tag manually
 
 1. Update the version and make your changes.
 2. Commit and push your changes to the main branch.

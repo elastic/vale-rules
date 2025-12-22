@@ -21,7 +21,18 @@ Vale rules use YAML. Key rule types in this repo:
 
 ## Releasing
 
-Releases are triggered by pushing a version tag:
+Releases can be created in two ways:
+
+### Option 1: Manual workflow dispatch (recommended)
+
+1. Go to the [Actions tab](https://github.com/elastic/vale-rules/actions/workflows/release.yml) in GitHub
+2. Click "Run workflow"
+3. Enter the version number (e.g., `v1.0.x`)
+4. Click "Run workflow"
+
+The workflow will create the tag and release automatically.
+
+### Option 2: Push a tag manually
 
 ```bash
 git tag v1.0.x
