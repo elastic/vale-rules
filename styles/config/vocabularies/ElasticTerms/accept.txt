@@ -47,6 +47,8 @@ ECS Logging Node.js
 ECS Logging PHP
 ECS Logging Python
 ECS Logging Ruby
+EDOT
+EDOT Collector
 EDOT Cloud Forwarder
 EDOT Cloud Forwarder for AWS
 EDOT Cloud Forwarder for Azure
