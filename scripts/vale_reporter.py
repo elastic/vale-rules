@@ -13,6 +13,16 @@ import hashlib
 from typing import Dict, List, Tuple, Optional
 
 
+# Footer message to append to all reports
+REPORT_FOOTER = """
+---
+
+The Vale linter checks documentation changes against the [Elastic Docs style guide](https://www.elastic.co/docs/contribute-docs/style-guide).
+
+To learn how to use the Vale rules in your local environment and how to report issues, refer to [Elastic style guide for Vale](https://www.elastic.co/docs/contribute-docs/vale-linter).
+"""
+
+
 def load_vale_output(file_path: str) -> Dict:
     """Load and parse Vale JSON output."""
     try:
@@ -142,6 +152,7 @@ def generate_markdown_report(
     
     if total_count == 0:
         report = "## ✅ Vale Linting Results\n\n**No issues found on modified lines!**\n"
+        report += REPORT_FOOTER
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(report)
         return 0, 0, 0
@@ -187,6 +198,9 @@ def generate_markdown_report(
             report += f"| {issue['file']} | {line_link} | {issue['rule']} | {issue['message']} |\n"
         report += "\n</details>\n\n"
     
+    # Add footer
+    report += REPORT_FOOTER
+    
     # Write report
     try:
         with open(output_file, 'w', encoding='utf-8') as f:
@@ -217,6 +231,7 @@ def main():
         # Create empty report
         with open('vale_report.md', 'w', encoding='utf-8') as f:
             f.write("## ✅ Vale Linting Results\n\n**No issues found on modified lines!**\n")
+            f.write(REPORT_FOOTER)
         with open('issue_counts.txt', 'w', encoding='utf-8') as f:
             f.write("errors=0\nwarnings=0\nsuggestions=0\n")
         return
