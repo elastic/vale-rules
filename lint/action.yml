@@ -273,7 +273,7 @@ runs:
 
 The Vale linter checks documentation changes against the [Elastic Docs style guide](https://www.elastic.co/docs/contribute-docs/style-guide).
 
-To learn how to use the Vale rules in your local environment and how to report issues, refer to [Elastic style guide for Vale](https://www.elastic.co/docs/contribute-docs/vale-linter).
+To use Vale locally or report issues, refer to [Elastic style guide for Vale](https://www.elastic.co/docs/contribute-docs/vale-linter).
 EOF
           
           # Also create issue_counts.txt for artifact upload
