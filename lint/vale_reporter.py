@@ -4,14 +4,19 @@ Vale Reporter - Parse Vale JSON output and generate GitHub-friendly reports.
 
 This script filters Vale issues to only modified lines, generates GitHub Actions
 annotations for inline diff display, and creates a markdown report for PR comments.
+It also outputs structured telemetry logs for analytics via GitHub observability.
 """
 
 import json
 import sys
 import os
 import hashlib
+from datetime import datetime, timezone
 from typing import Dict, List, Tuple
 
+
+# Telemetry log prefix - these lines are parsed by GitHub observability in Elasticsearch
+TELEMETRY_PREFIX = "VALE_TELEMETRY:"
 
 # Footer message to append to all reports
 REPORT_FOOTER = """
@@ -279,17 +284,55 @@ def generate_markdown_report(
     return error_count, warning_count, suggestion_count
 
 
+def log_telemetry(
+    filtered_issues: Dict[str, List[Dict]],
+    github_repo: str,
+    pr_number: str,
+    commit_sha: str
+) -> None:
+    """
+    Output structured telemetry logs for each Vale issue.
+    
+    These logs are picked up by the GitHub observability pipeline and sent to
+    Elasticsearch, where they can be filtered by the VALE_TELEMETRY prefix.
+    
+    Example log line:
+    VALE_TELEMETRY: {"rule": "Elastic.Wordiness", "severity": "suggestion", ...}
+    """
+    if not github_repo:
+        return
+    
+    timestamp = datetime.now(timezone.utc).isoformat()
+    
+    for severity, issues in filtered_issues.items():
+        for issue in issues:
+            telemetry_data = {
+                "timestamp": timestamp,
+                "repository": github_repo,
+                "pr_number": int(pr_number) if pr_number and pr_number.isdigit() else None,
+                "commit_sha": commit_sha or None,
+                "rule": issue['rule'],
+                "severity": severity,
+                "file_path": issue['file'],
+                "message": issue['message']
+            }
+            # Output as a single JSON line with prefix for easy filtering in Kibana
+            print(f"{TELEMETRY_PREFIX} {json.dumps(telemetry_data)}")
+
+
 def main():
     """Main entry point."""
     # Get GitHub context
     github_repo = os.environ.get('GITHUB_REPOSITORY', '')
     pr_number = os.environ.get('PR_NUMBER', '')
+    commit_sha = os.environ.get('GITHUB_SHA', '')
     debug = os.environ.get('DEBUG', 'false').lower() == 'true'
     
     if debug:
         print("::debug::Vale Reporter starting", file=sys.stderr)
         print(f"::debug::Repository: {github_repo}", file=sys.stderr)
         print(f"::debug::PR Number: {pr_number}", file=sys.stderr)
+        print(f"::debug::Commit SHA: {commit_sha}", file=sys.stderr)
     
     # Load Vale output
     vale_data = load_vale_output('vale_output.json')
@@ -328,6 +371,9 @@ def main():
         pr_number,
         'vale_report.md'
     )
+    
+    # Output structured telemetry logs (picked up by GitHub observability)
+    log_telemetry(filtered_issues, github_repo, pr_number, commit_sha)
     
     # Write counts for shell script
     try:
