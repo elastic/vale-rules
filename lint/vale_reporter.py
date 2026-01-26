@@ -302,12 +302,10 @@ def log_telemetry(
     if not github_repo:
         return
     
-    timestamp = datetime.now(timezone.utc).isoformat()
-    
     for severity, issues in filtered_issues.items():
         for issue in issues:
             telemetry_data = {
-                "timestamp": timestamp,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "repository": github_repo,
                 "pr_number": int(pr_number) if pr_number and pr_number.isdigit() else None,
                 "commit_sha": commit_sha or None,
