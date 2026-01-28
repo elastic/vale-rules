@@ -15,9 +15,8 @@ from datetime import datetime, timezone
 from typing import Dict, List, Tuple
 
 
-# Telemetry log prefixes - these lines are parsed by GitHub observability in Elasticsearch
-TELEMETRY_PREFIX = "VALE_TELEMETRY:"
-TELEMETRY_SUMMARY_PREFIX = "VALE_TELEMETRY_SUMMARY:"
+# Telemetry prefix for plain-text logs
+TELEMETRY_PREFIX = "VALE_TELEMETRY"
 
 # Footer message to append to all reports
 REPORT_FOOTER = """
@@ -296,14 +295,14 @@ def log_telemetry(
     Output structured telemetry logs for each Vale issue, plus a summary.
     
     These logs are picked up by the GitHub observability pipeline and sent to
-    Elasticsearch, where they can be filtered by the VALE_TELEMETRY prefix.
+    Elasticsearch. They are emitted as plain-text key/value pairs.
     
     This function is wrapped in try/except to ensure telemetry failures
     never break the main linting workflow.
     
     Example log lines:
-    VALE_TELEMETRY: {"rule": "Elastic.Wordiness", "severity": "suggestion", "line": 42, "match": "very", ...}
-    VALE_TELEMETRY_SUMMARY: {"error_count": 0, "warning_count": 1, "suggestion_count": 2, ...}
+    VALE_TELEMETRY issue repository="elastic/docs-content" pr_number=123 commit_sha="abc" rule="Elastic.Wordiness" severity="suggestion" file_path="docs/guide.md" line=42 match="very" message="Consider removing \"very\"."
+    VALE_TELEMETRY summary repository="elastic/docs-content" pr_number=123 commit_sha="abc" error_count=0 warning_count=1 suggestion_count=2 total_count=3
     """
     try:
         if not github_repo:
@@ -314,40 +313,46 @@ def log_telemetry(
         pr_number_int = int(pr_number) if pr_number and pr_number.isdigit() else None
         commit_sha_val = commit_sha or None
         
+        def format_value(value: object) -> str:
+            if value is None:
+                return "null"
+            if isinstance(value, str):
+                return json.dumps(value)
+            return str(value)
+
         # Log individual issues
         for severity, issues in filtered_issues.items():
             for issue in issues:
-                telemetry_data = {
-                    "timestamp": timestamp,
-                    "repository": github_repo,
-                    "pr_number": pr_number_int,
-                    "commit_sha": commit_sha_val,
-                    "rule": issue.get('rule', 'Unknown'),
-                    "severity": severity,
-                    "file_path": issue.get('file', ''),
-                    "line": issue.get('line', 0),
-                    "match": issue.get('match', ''),
-                    "message": issue.get('message', '')
-                }
-                # Output as a single JSON line with prefix for easy filtering in Kibana
-                print(f"{TELEMETRY_PREFIX} {json.dumps(telemetry_data)}")
+                print(
+                    f"{TELEMETRY_PREFIX} issue "
+                    f"timestamp={format_value(timestamp)} "
+                    f"repository={format_value(github_repo)} "
+                    f"pr_number={format_value(pr_number_int)} "
+                    f"commit_sha={format_value(commit_sha_val)} "
+                    f"rule={format_value(issue.get('rule', 'Unknown'))} "
+                    f"severity={format_value(severity)} "
+                    f"file_path={format_value(issue.get('file', ''))} "
+                    f"line={format_value(issue.get('line', 0))} "
+                    f"match={format_value(issue.get('match', ''))} "
+                    f"message={format_value(issue.get('message', ''))}"
+                )
         
         # Always log a summary (enables tracking runs with zero issues)
         error_count = len(filtered_issues.get('error', []))
         warning_count = len(filtered_issues.get('warning', []))
         suggestion_count = len(filtered_issues.get('suggestion', []))
         
-        summary_data = {
-            "timestamp": timestamp,
-            "repository": github_repo,
-            "pr_number": pr_number_int,
-            "commit_sha": commit_sha_val,
-            "error_count": error_count,
-            "warning_count": warning_count,
-            "suggestion_count": suggestion_count,
-            "total_count": error_count + warning_count + suggestion_count
-        }
-        print(f"{TELEMETRY_SUMMARY_PREFIX} {json.dumps(summary_data)}")
+        print(
+            f"{TELEMETRY_PREFIX} summary "
+            f"timestamp={format_value(timestamp)} "
+            f"repository={format_value(github_repo)} "
+            f"pr_number={format_value(pr_number_int)} "
+            f"commit_sha={format_value(commit_sha_val)} "
+            f"error_count={format_value(error_count)} "
+            f"warning_count={format_value(warning_count)} "
+            f"suggestion_count={format_value(suggestion_count)} "
+            f"total_count={format_value(error_count + warning_count + suggestion_count)}"
+        )
         
     except Exception:
         # Silently ignore telemetry errors - must never break the linting workflow
