@@ -295,14 +295,14 @@ def log_telemetry(
     Output structured telemetry logs for each Vale issue, plus a summary.
     
     These logs are picked up by the GitHub observability pipeline and sent to
-    Elasticsearch. They are emitted as plain-text key/value pairs.
+    Elasticsearch. They are emitted using GitHub's ::notice:: format.
     
     This function is wrapped in try/except to ensure telemetry failures
     never break the main linting workflow.
     
     Example log lines:
-    VALE_TELEMETRY issue repository="elastic/docs-content" pr_number=123 commit_sha="abc" rule="Elastic.Wordiness" severity="suggestion" file_path="docs/guide.md" line=42 match="very" message="Consider removing \"very\"."
-    VALE_TELEMETRY summary repository="elastic/docs-content" pr_number=123 commit_sha="abc" error_count=0 warning_count=1 suggestion_count=2 total_count=3
+    ::notice::VALE_TELEMETRY issue repository="elastic/docs-content" pr_number=123 commit_sha="abc" rule="Elastic.Wordiness" severity="suggestion" file_path="docs/guide.md" line=42 match="very" message="Consider removing \"very\"."
+    ::notice::VALE_TELEMETRY summary repository="elastic/docs-content" pr_number=123 commit_sha="abc" error_count=0 warning_count=1 suggestion_count=2 total_count=3
     """
     try:
         if not github_repo:
@@ -324,7 +324,7 @@ def log_telemetry(
         for severity, issues in filtered_issues.items():
             for issue in issues:
                 print(
-                    f"{TELEMETRY_PREFIX} issue "
+                    f"::notice::{TELEMETRY_PREFIX} issue "
                     f"timestamp={format_value(timestamp)} "
                     f"repository={format_value(github_repo)} "
                     f"pr_number={format_value(pr_number_int)} "
@@ -343,7 +343,7 @@ def log_telemetry(
         suggestion_count = len(filtered_issues.get('suggestion', []))
         
         print(
-            f"{TELEMETRY_PREFIX} summary "
+            f"::notice::{TELEMETRY_PREFIX} summary "
             f"timestamp={format_value(timestamp)} "
             f"repository={format_value(github_repo)} "
             f"pr_number={format_value(pr_number_int)} "
