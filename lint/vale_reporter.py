@@ -15,8 +15,9 @@ from datetime import datetime, timezone
 from typing import Dict, List, Tuple
 
 
-# Telemetry log prefix - these lines are parsed by GitHub observability in Elasticsearch
+# Telemetry log prefixes - these lines are parsed by GitHub observability in Elasticsearch
 TELEMETRY_PREFIX = "VALE_TELEMETRY:"
+TELEMETRY_SUMMARY_PREFIX = "VALE_TELEMETRY_SUMMARY:"
 
 # Footer message to append to all reports
 REPORT_FOOTER = """
@@ -144,7 +145,8 @@ def filter_issues_to_modified_lines(
                 'file': file,
                 'line': line_num,
                 'rule': issue.get('Check', 'Unknown'),
-                'message': issue.get('Message', '')
+                'message': issue.get('Message', ''),
+                'match': issue.get('Match', '')
             })
     
     # Log filtering summary
@@ -291,7 +293,7 @@ def log_telemetry(
     commit_sha: str
 ) -> None:
     """
-    Output structured telemetry logs for each Vale issue.
+    Output structured telemetry logs for each Vale issue, plus a summary.
     
     These logs are picked up by the GitHub observability pipeline and sent to
     Elasticsearch, where they can be filtered by the VALE_TELEMETRY prefix.
@@ -299,8 +301,9 @@ def log_telemetry(
     This function is wrapped in try/except to ensure telemetry failures
     never break the main linting workflow.
     
-    Example log line:
-    VALE_TELEMETRY: {"rule": "Elastic.Wordiness", "severity": "suggestion", ...}
+    Example log lines:
+    VALE_TELEMETRY: {"rule": "Elastic.Wordiness", "severity": "suggestion", "line": 42, "match": "very", ...}
+    VALE_TELEMETRY_SUMMARY: {"error_count": 0, "warning_count": 1, "suggestion_count": 2, ...}
     """
     try:
         if not github_repo:
@@ -311,6 +314,7 @@ def log_telemetry(
         pr_number_int = int(pr_number) if pr_number and pr_number.isdigit() else None
         commit_sha_val = commit_sha or None
         
+        # Log individual issues
         for severity, issues in filtered_issues.items():
             for issue in issues:
                 telemetry_data = {
@@ -321,10 +325,30 @@ def log_telemetry(
                     "rule": issue.get('rule', 'Unknown'),
                     "severity": severity,
                     "file_path": issue.get('file', ''),
+                    "line": issue.get('line', 0),
+                    "match": issue.get('match', ''),
                     "message": issue.get('message', '')
                 }
                 # Output as a single JSON line with prefix for easy filtering in Kibana
                 print(f"{TELEMETRY_PREFIX} {json.dumps(telemetry_data)}")
+        
+        # Always log a summary (enables tracking runs with zero issues)
+        error_count = len(filtered_issues.get('error', []))
+        warning_count = len(filtered_issues.get('warning', []))
+        suggestion_count = len(filtered_issues.get('suggestion', []))
+        
+        summary_data = {
+            "timestamp": timestamp,
+            "repository": github_repo,
+            "pr_number": pr_number_int,
+            "commit_sha": commit_sha_val,
+            "error_count": error_count,
+            "warning_count": warning_count,
+            "suggestion_count": suggestion_count,
+            "total_count": error_count + warning_count + suggestion_count
+        }
+        print(f"{TELEMETRY_SUMMARY_PREFIX} {json.dumps(summary_data)}")
+        
     except Exception:
         # Silently ignore telemetry errors - must never break the linting workflow
         pass
