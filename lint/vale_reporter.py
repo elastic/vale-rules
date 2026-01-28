@@ -181,7 +181,7 @@ def generate_github_annotations(filtered_issues: Dict[str, List[Dict]]) -> None:
                 annotation_level = 'notice'
             
             # Output GitHub Actions annotation
-            print(f"::{annotation_level} file={issue['file']},line={issue['line']}::{issue['rule']}: {issue['message']}")
+            print(f"::{annotation_level} file={issue.get('file', '')},line={issue.get('line', 0)}::{issue.get('rule', 'Unknown')}: {issue.get('message', '')}")
 
 
 def generate_diff_hash(file_path: str) -> str:
@@ -296,26 +296,38 @@ def log_telemetry(
     These logs are picked up by the GitHub observability pipeline and sent to
     Elasticsearch, where they can be filtered by the VALE_TELEMETRY prefix.
     
+    This function is wrapped in try/except to ensure telemetry failures
+    never break the main linting workflow.
+    
     Example log line:
     VALE_TELEMETRY: {"rule": "Elastic.Wordiness", "severity": "suggestion", ...}
     """
-    if not github_repo:
-        return
-    
-    for severity, issues in filtered_issues.items():
-        for issue in issues:
-            telemetry_data = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "repository": github_repo,
-                "pr_number": int(pr_number) if pr_number and pr_number.isdigit() else None,
-                "commit_sha": commit_sha or None,
-                "rule": issue['rule'],
-                "severity": severity,
-                "file_path": issue['file'],
-                "message": issue['message']
-            }
-            # Output as a single JSON line with prefix for easy filtering in Kibana
-            print(f"{TELEMETRY_PREFIX} {json.dumps(telemetry_data)}")
+    try:
+        if not github_repo:
+            return
+        
+        # Pre-compute values that don't change per issue
+        timestamp = datetime.now(timezone.utc).isoformat()
+        pr_number_int = int(pr_number) if pr_number and pr_number.isdigit() else None
+        commit_sha_val = commit_sha or None
+        
+        for severity, issues in filtered_issues.items():
+            for issue in issues:
+                telemetry_data = {
+                    "timestamp": timestamp,
+                    "repository": github_repo,
+                    "pr_number": pr_number_int,
+                    "commit_sha": commit_sha_val,
+                    "rule": issue.get('rule', 'Unknown'),
+                    "severity": severity,
+                    "file_path": issue.get('file', ''),
+                    "message": issue.get('message', '')
+                }
+                # Output as a single JSON line with prefix for easy filtering in Kibana
+                print(f"{TELEMETRY_PREFIX} {json.dumps(telemetry_data)}")
+    except Exception:
+        # Silently ignore telemetry errors - must never break the linting workflow
+        pass
 
 
 def main():
