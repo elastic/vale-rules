@@ -152,77 +152,12 @@ runs:
     - name: Filter files by include-paths
       id: filter-paths
       if: steps.files-to-lint.outputs.has_files == 'true' && inputs.include-paths != ''
-      uses: actions/github-script@v8
-      with:
-        script: |
-          const fs = require('fs');
-          const path = require('path');
-          
-          const includePaths = `${{ inputs.include-paths }}`;
-          const debug = '${{ inputs.debug }}' === 'true';
-          
-          // Parse include-paths (handles both multi-line and space-separated)
-          const patterns = includePaths
-            .split(/[\s\n]+/)
-            .map(p => p.trim().replace(/\/$/, ''))  // Remove trailing slashes
-            .filter(p => p.length > 0);
-          
-          if (debug) {
-            core.debug(`Patterns: ${JSON.stringify(patterns)}`);
-          }
-          
-          // Read files to lint
-          const filesToLint = fs.readFileSync('files_to_lint.txt', 'utf8')
-            .split('\n')
-            .filter(f => f.trim().length > 0);
-          
-          console.log(`Filtering ${filesToLint.length} files against ${patterns.length} patterns...`);
-          
-          // Convert glob pattern to regex
-          function globToRegex(pattern) {
-            let regex = pattern
-              .replace(/\*\*/g, '<<<DOUBLESTAR>>>')
-              .replace(/\*/g, '[^/]*')
-              .replace(/<<<DOUBLESTAR>>>/g, '.*')
-              .replace(/\?/g, '.');
-            return new RegExp(`^${regex}$`);
-          }
-          
-          // Filter files
-          const filteredFiles = filesToLint.filter(file => {
-            for (const pattern of patterns) {
-              // Check if pattern has glob characters
-              if (pattern.includes('*') || pattern.includes('?')) {
-                const regex = globToRegex(pattern);
-                if (regex.test(file)) {
-                  if (debug) core.debug(`File '${file}' matched pattern '${pattern}'`);
-                  return true;
-                }
-              } else {
-                // Simple prefix matching: exact path or directory prefix
-                if (file === pattern || file.startsWith(pattern + '/')) {
-                  if (debug) core.debug(`File '${file}' matched prefix '${pattern}'`);
-                  return true;
-                }
-              }
-            }
-            if (debug) core.debug(`File '${file}' excluded (no match)`);
-            return false;
-          });
-          
-          // Write filtered results
-          if (filteredFiles.length > 0) {
-            fs.writeFileSync('files_to_lint.txt', filteredFiles.join('\n') + '\n');
-            console.log(`Files after filtering (${filteredFiles.length}):`);
-            filteredFiles.forEach(f => console.log(`  ${f}`));
-            core.setOutput('has_files', 'true');
-          } else {
-            console.log('No files matched include-paths patterns');
-            if (fs.existsSync('files_to_lint.txt')) {
-              fs.unlinkSync('files_to_lint.txt');
-            }
-            core.setOutput('has_files', 'false');
-          }
+      shell: bash
+      env:
+        INCLUDE_PATHS: ${{ inputs.include-paths }}
+        DEBUG: ${{ inputs.debug }}
+      run: |
+        python3 ${{ github.action_path }}/path_filter.py
 
     - name: Update has_files output after filtering
       id: final-files-check
