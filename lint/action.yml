@@ -310,6 +310,14 @@ runs:
           echo "error_count=0" >> $GITHUB_OUTPUT
         fi
 
+    - name: Write Job Summary
+      if: always() && steps.files-to-lint.outputs.has_files == 'true'
+      shell: bash
+      run: |
+        if [ -f vale_report.md ]; then
+          cat vale_report.md >> $GITHUB_STEP_SUMMARY
+        fi
+
     - name: Upload Vale results
       if: always() && steps.files-to-lint.outputs.has_files == 'true'
       uses: actions/upload-artifact@v6
