@@ -12,7 +12,7 @@ inputs:
     required: false
     default: ''
   include_paths:
-    description: 'Paths to include for linting (space-separated). Supports glob patterns. Only files matching these paths will be linted. Example: "docs/team-a docs/team-b/**"'
+    description: 'Paths to include for linting. Supports glob patterns. Can be space-separated or multi-line. Only files matching these paths will be linted.'
     required: false
     default: ''
   fail_on_error:
@@ -157,16 +157,27 @@ runs:
         INCLUDE_PATHS: ${{ inputs.include_paths }}
         DEBUG: ${{ inputs.debug }}
       run: |
-        echo "Filtering files by include_paths: ${INCLUDE_PATHS}"
+        echo "Filtering files by include_paths..."
         
         # Create a temp file for filtered results
         > files_filtered.txt
+        
+        # Normalize include_paths: convert newlines to spaces, then split
+        # This handles both space-separated and multi-line formats
+        NORMALIZED_PATHS=$(echo "${INCLUDE_PATHS}" | tr '\n' ' ')
+        
+        if [ "${DEBUG}" == "true" ]; then
+          echo "::debug::Normalized paths: ${NORMALIZED_PATHS}"
+        fi
         
         # Read each file and check if it matches any include path
         while IFS= read -r file; do
           matched=false
           
-          for pattern in ${INCLUDE_PATHS}; do
+          for pattern in ${NORMALIZED_PATHS}; do
+            # Skip empty patterns
+            [ -z "$pattern" ] && continue
+            
             # Remove trailing slash if present for consistent matching
             pattern="${pattern%/}"
             
