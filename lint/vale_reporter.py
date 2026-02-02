@@ -300,11 +300,17 @@ def log_telemetry(
     This function is wrapped in try/except to ensure telemetry failures
     never break the main linting workflow.
     
+    Set DISABLE_TELEMETRY=true to skip telemetry logging (used in tests).
+    
     Example log lines:
     ::notice::VALE_TELEMETRY issue repository="elastic/docs-content" pr_number=123 commit_sha="abc" rule="Elastic.Wordiness" severity="suggestion" file_path="docs/guide.md" line=42 match="very" message="Consider removing \"very\"."
     ::notice::VALE_TELEMETRY summary repository="elastic/docs-content" pr_number=123 commit_sha="abc" error_count=0 warning_count=1 suggestion_count=2 total_count=3
     """
     try:
+        # Skip telemetry if disabled (e.g., during testing)
+        if os.environ.get('DISABLE_TELEMETRY', 'false').lower() == 'true':
+            return
+        
         if not github_repo:
             return
         
