@@ -152,7 +152,7 @@ runs:
     - name: Filter files by include-paths
       id: filter-paths
       if: steps.files-to-lint.outputs.has_files == 'true' && inputs.include-paths != ''
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       with:
         script: |
           const fs = require('fs');
