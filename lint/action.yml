@@ -185,7 +185,7 @@ runs:
               .replace(/\*/g, '[^/]*')
               .replace(/<<<DOUBLESTAR>>>/g, '.*')
               .replace(/\?/g, '.');
-            return new RegExp(`^${regex}`);
+            return new RegExp(`^${regex}$`);
           }
           
           // Filter files
@@ -199,8 +199,8 @@ runs:
                   return true;
                 }
               } else {
-                // Simple prefix matching
-                if (file === pattern || file.startsWith(pattern + '/') || file.startsWith(pattern)) {
+                // Simple prefix matching: exact path or directory prefix
+                if (file === pattern || file.startsWith(pattern + '/')) {
                   if (debug) core.debug(`File '${file}' matched prefix '${pattern}'`);
                   return true;
                 }
@@ -218,7 +218,9 @@ runs:
             core.setOutput('has_files', 'true');
           } else {
             console.log('No files matched include-paths patterns');
-            fs.unlinkSync('files_to_lint.txt');
+            if (fs.existsSync('files_to_lint.txt')) {
+              fs.unlinkSync('files_to_lint.txt');
+            }
             core.setOutput('has_files', 'false');
           }
 
