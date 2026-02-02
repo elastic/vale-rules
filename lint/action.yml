@@ -152,70 +152,12 @@ runs:
     - name: Filter files by include-paths
       id: filter-paths
       if: steps.files-to-lint.outputs.has_files == 'true' && inputs.include-paths != ''
-      shell: python
+      shell: bash
       env:
         INCLUDE_PATHS: ${{ inputs.include-paths }}
         DEBUG: ${{ inputs.debug }}
-        GITHUB_OUTPUT: ${{ github.output }}
       run: |
-        import fnmatch
-        import os
-        
-        include_paths = os.environ.get('INCLUDE_PATHS', '')
-        debug = os.environ.get('DEBUG', 'false').lower() == 'true'
-        
-        # Parse patterns (handles multi-line and space-separated)
-        patterns = [p.strip().rstrip('/') for line in include_paths.split('\n') 
-                    for p in line.split() if p.strip()]
-        
-        if debug:
-            print(f'::debug::Patterns: {patterns}')
-        
-        # Read files to lint
-        try:
-            with open('files_to_lint.txt') as f:
-                files = [line.strip() for line in f if line.strip()]
-        except FileNotFoundError:
-            print('No files_to_lint.txt found')
-            exit(0)
-        
-        print(f'Filtering {len(files)} files against {len(patterns)} patterns...')
-        
-        # Filter files using fnmatch for glob support
-        def matches(file, pattern):
-            if fnmatch.fnmatch(file, pattern):
-                return True
-            if file.startswith(pattern + '/'):
-                return True
-            return False
-        
-        filtered = []
-        for file in files:
-            if any(matches(file, p) for p in patterns):
-                if debug:
-                    print(f"::debug::File '{file}' matched")
-                filtered.append(file)
-            elif debug:
-                print(f"::debug::File '{file}' excluded")
-        
-        # Write results
-        github_output = os.environ.get('GITHUB_OUTPUT', '')
-        if filtered:
-            with open('files_to_lint.txt', 'w') as f:
-                f.write('\n'.join(filtered) + '\n')
-            print(f'Files after filtering ({len(filtered)}):')
-            for file in filtered:
-                print(f'  {file}')
-            if github_output:
-                with open(github_output, 'a') as f:
-                    f.write('has_files=true\n')
-        else:
-            print('No files matched include-paths patterns')
-            if os.path.exists('files_to_lint.txt'):
-                os.remove('files_to_lint.txt')
-            if github_output:
-                with open(github_output, 'a') as f:
-                    f.write('has_files=false\n')
+        python3 ${{ github.action_path }}/path_filter.py
 
     - name: Update has_files output after filtering
       id: final-files-check
