@@ -1,0 +1,102 @@
+name: Test Lint Action
+
+on:
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: test-lint-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  test-lint:
+    name: Test (${{ matrix.style_source }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - style_source: released
+            use_local_styles: 'false'
+          - style_source: local
+            use_local_styles: 'true'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run lint action
+        id: lint
+        uses: ./lint
+        with:
+          files: .github/test-fixtures/sample-violations.md
+          fail_on_error: 'false'
+          use_local_styles: ${{ matrix.use_local_styles }}
+          disable_telemetry: 'true'
+          debug: 'true'
+
+      - name: Verify report was generated
+        run: |
+          if [ ! -f vale_report.md ]; then
+            echo "::error::vale_report.md was not generated"
+            exit 1
+          fi
+          echo "✓ vale_report.md exists"
+          echo "Report contents:"
+          cat vale_report.md
+
+      - name: Verify issues were found
+        run: |
+          if [ ! -f issue_counts.txt ]; then
+            echo "::error::issue_counts.txt was not generated"
+            exit 1
+          fi
+
+          source issue_counts.txt
+          total=$((errors + warnings + suggestions))
+
+          echo "Found: $errors errors, $warnings warnings, $suggestions suggestions"
+
+          # sample-violations.md should trigger multiple issues
+          if [ "$total" -eq 0 ]; then
+            echo "::error::Expected issues in sample-violations.md but found none"
+            exit 1
+          fi
+
+          echo "✓ Issues detected as expected (total: $total)"
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.style_source }}
+          path: |
+            vale_report.md
+            issue_counts.txt
+          retention-days: 5
+
+  # This job runs after all matrix jobs complete to upload a single artifact
+  # that the report action can download
+  upload-results:
+    name: Upload combined results
+    runs-on: ubuntu-latest
+    needs: test-lint
+    if: always()
+
+    steps:
+      - name: Download local styles results
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results-local
+
+      - name: Upload as vale-results for report action
+        uses: actions/upload-artifact@v4
+        with:
+          name: vale-results
+          path: |
+            vale_report.md
+            issue_counts.txt
+          retention-days: 1
