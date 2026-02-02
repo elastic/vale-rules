@@ -11,7 +11,7 @@ inputs:
     description: 'Files or directories to lint (space-separated). If not provided, lints changed files in PR.'
     required: false
     default: ''
-  include_paths:
+  include-paths:
     description: 'Paths to include for linting. Supports glob patterns. Can be space-separated or multi-line. Only files matching these paths will be linted.'
     required: false
     default: ''
@@ -149,89 +149,78 @@ runs:
           echo "has_files=false" >> $GITHUB_OUTPUT
         fi
 
-    - name: Filter files by include_paths
+    - name: Filter files by include-paths
       id: filter-paths
-      if: steps.files-to-lint.outputs.has_files == 'true' && inputs.include_paths != ''
-      shell: bash
-      env:
-        INCLUDE_PATHS: ${{ inputs.include_paths }}
-        DEBUG: ${{ inputs.debug }}
-      run: |
-        echo "Filtering files by include_paths..."
-        
-        # Create a temp file for filtered results
-        > files_filtered.txt
-        
-        # Normalize include_paths: convert newlines to spaces, then split
-        # This handles both space-separated and multi-line formats
-        NORMALIZED_PATHS=$(echo "${INCLUDE_PATHS}" | tr '\n' ' ')
-        
-        if [ "${DEBUG}" == "true" ]; then
-          echo "::debug::Normalized paths: ${NORMALIZED_PATHS}"
-        fi
-        
-        # Read each file and check if it matches any include path
-        while IFS= read -r file; do
-          matched=false
+      if: steps.files-to-lint.outputs.has_files == 'true' && inputs.include-paths != ''
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
           
-          for pattern in ${NORMALIZED_PATHS}; do
-            # Skip empty patterns
-            [ -z "$pattern" ] && continue
-            
-            # Remove trailing slash if present for consistent matching
-            pattern="${pattern%/}"
-            
-            # Check if pattern contains glob characters
-            if [[ "$pattern" == *"*"* ]] || [[ "$pattern" == *"?"* ]]; then
-              # Use bash extended globbing for patterns with wildcards
-              # Enable extglob for advanced pattern matching
-              shopt -s extglob nullglob
-              
-              # Convert glob pattern to regex for matching
-              # Replace ** with a marker, then * with [^/]*, then restore **
-              regex_pattern="${pattern//\*\*/<<<DOUBLESTAR>>>}"
-              regex_pattern="${regex_pattern//\*/[^/]*}"
-              regex_pattern="${regex_pattern//<<<DOUBLESTAR>>>/.*}"
-              regex_pattern="${regex_pattern//\?/.}"
-              regex_pattern="^${regex_pattern}"
-              
-              if [[ "$file" =~ $regex_pattern ]]; then
-                matched=true
-                if [ "${DEBUG}" == "true" ]; then
-                  echo "::debug::File '$file' matched pattern '$pattern'"
-                fi
-                break
-              fi
-            else
-              # Simple prefix matching for non-glob patterns
-              if [[ "$file" == "$pattern"* ]] || [[ "$file" == "$pattern/"* ]] || [[ "$file" == "$pattern" ]]; then
-                matched=true
-                if [ "${DEBUG}" == "true" ]; then
-                  echo "::debug::File '$file' matched prefix '$pattern'"
-                fi
-                break
-              fi
-            fi
-          done
+          const includePaths = `${{ inputs.include-paths }}`;
+          const debug = '${{ inputs.debug }}' === 'true';
           
-          if [ "$matched" = true ]; then
-            echo "$file" >> files_filtered.txt
-          elif [ "${DEBUG}" == "true" ]; then
-            echo "::debug::File '$file' excluded (no match)"
-          fi
-        done < files_to_lint.txt
-        
-        # Replace files_to_lint.txt with filtered results
-        if [ -s files_filtered.txt ]; then
-          mv files_filtered.txt files_to_lint.txt
-          echo "Files after filtering:"
-          cat files_to_lint.txt
-          echo "has_files=true" >> $GITHUB_OUTPUT
-        else
-          echo "No files matched include_paths patterns"
-          rm -f files_to_lint.txt
-          echo "has_files=false" >> $GITHUB_OUTPUT
-        fi
+          // Parse include-paths (handles both multi-line and space-separated)
+          const patterns = includePaths
+            .split(/[\s\n]+/)
+            .map(p => p.trim().replace(/\/$/, ''))  // Remove trailing slashes
+            .filter(p => p.length > 0);
+          
+          if (debug) {
+            core.debug(`Patterns: ${JSON.stringify(patterns)}`);
+          }
+          
+          // Read files to lint
+          const filesToLint = fs.readFileSync('files_to_lint.txt', 'utf8')
+            .split('\n')
+            .filter(f => f.trim().length > 0);
+          
+          console.log(`Filtering ${filesToLint.length} files against ${patterns.length} patterns...`);
+          
+          // Convert glob pattern to regex
+          function globToRegex(pattern) {
+            let regex = pattern
+              .replace(/\*\*/g, '<<<DOUBLESTAR>>>')
+              .replace(/\*/g, '[^/]*')
+              .replace(/<<<DOUBLESTAR>>>/g, '.*')
+              .replace(/\?/g, '.');
+            return new RegExp(`^${regex}`);
+          }
+          
+          // Filter files
+          const filteredFiles = filesToLint.filter(file => {
+            for (const pattern of patterns) {
+              // Check if pattern has glob characters
+              if (pattern.includes('*') || pattern.includes('?')) {
+                const regex = globToRegex(pattern);
+                if (regex.test(file)) {
+                  if (debug) core.debug(`File '${file}' matched pattern '${pattern}'`);
+                  return true;
+                }
+              } else {
+                // Simple prefix matching
+                if (file === pattern || file.startsWith(pattern + '/') || file.startsWith(pattern)) {
+                  if (debug) core.debug(`File '${file}' matched prefix '${pattern}'`);
+                  return true;
+                }
+              }
+            }
+            if (debug) core.debug(`File '${file}' excluded (no match)`);
+            return false;
+          });
+          
+          // Write filtered results
+          if (filteredFiles.length > 0) {
+            fs.writeFileSync('files_to_lint.txt', filteredFiles.join('\n') + '\n');
+            console.log(`Files after filtering (${filteredFiles.length}):`);
+            filteredFiles.forEach(f => console.log(`  ${f}`));
+            core.setOutput('has_files', 'true');
+          } else {
+            console.log('No files matched include-paths patterns');
+            fs.unlinkSync('files_to_lint.txt');
+            core.setOutput('has_files', 'false');
+          }
 
     - name: Update has_files output after filtering
       id: final-files-check
@@ -442,7 +431,6 @@ runs:
         rm -f .vale.ini.temp
         rm -f changed_files.txt
         rm -f files_to_lint.txt
-        rm -f files_filtered.txt
         rm -f vale_output.json
         rm -f line_ranges.txt
         rm -rf .vale-styles
