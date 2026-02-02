@@ -36,6 +36,7 @@ jobs:
           fail_on_error: 'false'
           use_local_styles: ${{ matrix.use_local_styles }}
           disable_telemetry: 'true'
+          upload_artifact: 'false'  # Skip internal upload, we handle it below
           debug: 'true'
 
       - name: Verify report was generated

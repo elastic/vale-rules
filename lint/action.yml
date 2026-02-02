@@ -35,6 +35,14 @@ inputs:
     description: 'Disable telemetry logging (for testing)'
     required: false
     default: 'false'
+  upload_artifact:
+    description: 'Upload Vale results as artifact (default: true)'
+    required: false
+    default: 'true'
+  artifact_name:
+    description: 'Name for the uploaded artifact (only used when upload_artifact is true)'
+    required: false
+    default: 'vale-results'
 
 runs:
   using: 'composite'
@@ -374,10 +382,10 @@ runs:
         fi
 
     - name: Upload Vale results
-      if: always() && steps.files-to-lint.outputs.has_files == 'true'
-      uses: actions/upload-artifact@v6
+      if: always() && steps.files-to-lint.outputs.has_files == 'true' && inputs.upload_artifact == 'true'
+      uses: actions/upload-artifact@v4
       with:
-        name: vale-results
+        name: ${{ inputs.artifact_name }}
         path: |
           vale_report.md
           issue_counts.txt
