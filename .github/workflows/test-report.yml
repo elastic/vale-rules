@@ -55,5 +55,6 @@ jobs:
           if [ -n "$COMMENT_EXISTS" ]; then
             echo "✓ Vale linting results comment found (comment ID: $COMMENT_EXISTS)"
           else
-            echo "::warning::Vale linting results comment not found on PR #${PR_NUMBER}"
+            echo "::error::Vale linting results comment not found on PR #${PR_NUMBER}"
+            exit 1
           fi
