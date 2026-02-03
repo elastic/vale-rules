@@ -27,6 +27,26 @@ inputs:
     description: 'Enable debug output'
     required: false
     default: 'false'
+  use_local_styles:
+    description: 'Use local styles directory instead of downloading from releases (for testing local changes)'
+    required: false
+    default: 'false'
+  styles_path:
+    description: 'Path to local styles directory (only used when use_local_styles is true). Defaults to action repository root.'
+    required: false
+    default: ''
+  disable_telemetry:
+    description: 'Disable telemetry logging (for testing)'
+    required: false
+    default: 'false'
+  upload_artifact:
+    description: 'Upload Vale results as artifact (default: true)'
+    required: false
+    default: 'true'
+  artifact_name:
+    description: 'Name for the uploaded artifact (only used when upload_artifact is true)'
+    required: false
+    default: 'vale-results'
 
 runs:
   using: 'composite'
@@ -86,7 +106,8 @@ runs:
           echo "Vale is already installed: $(vale --version)"
         fi
 
-    - name: Configure Vale with Elastic style guide
+    - name: Configure Vale with released styles
+      if: inputs.use_local_styles != 'true'
       shell: bash
       run: |
         # Create a minimal .vale.ini for this run
@@ -104,7 +125,48 @@ runs:
           exit 1
         fi
 
-        echo "Vale configured with Elastic style guide"
+        echo "Vale configured with Elastic style guide (released)"
+
+    - name: Configure Vale with local styles
+      if: inputs.use_local_styles == 'true'
+      shell: bash
+      env:
+        STYLES_PATH: ${{ inputs.styles_path }}
+      run: |
+        # Use local .vale.ini and styles directory for testing
+        # This allows testing Vale rule changes before they're released
+
+        # Determine the styles source path
+        if [ -n "${STYLES_PATH}" ]; then
+          SOURCE_PATH="${STYLES_PATH}"
+        else
+          # Default to the action's repository root (where this action is checked out)
+          SOURCE_PATH="${{ github.action_path }}/.."
+        fi
+
+        echo "Using local styles from: ${SOURCE_PATH}"
+
+        # Verify local .vale.ini exists
+        if [ ! -f "${SOURCE_PATH}/.vale.ini" ]; then
+          echo "::error::Local .vale.ini not found at ${SOURCE_PATH}/.vale.ini"
+          exit 1
+        fi
+
+        # Verify local styles directory exists
+        if [ ! -d "${SOURCE_PATH}/styles" ]; then
+          echo "::error::Local styles directory not found at ${SOURCE_PATH}/styles"
+          exit 1
+        fi
+
+        # Copy local config and styles to workspace
+        # Modify StylesPath to point to .vale-styles (consistent with released styles path)
+        sed 's|^StylesPath = styles|StylesPath = .vale-styles|' "${SOURCE_PATH}/.vale.ini" > .vale.ini.temp
+        mkdir -p .vale-styles
+        cp -r "${SOURCE_PATH}/styles/"* .vale-styles/
+
+        echo "Vale configured with local styles"
+        echo "Styles copied from: ${SOURCE_PATH}/styles"
+        ls -la .vale-styles/
 
     - name: Get changed files
       id: changed-files
@@ -237,6 +299,7 @@ runs:
         GITHUB_REPOSITORY: ${{ github.repository }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
         DEBUG: ${{ inputs.debug }}
+        DISABLE_TELEMETRY: ${{ inputs.disable_telemetry }}
       run: |
         if [ "${DEBUG}" == "true" ]; then
           echo "::debug::Running Vale with debug mode enabled"
@@ -337,7 +400,7 @@ runs:
         fi
 
     - name: Write Job Summary
-      if: always() && steps.files-to-lint.outputs.has_files == 'true'
+      if: always() && steps.final-files-check.outputs.has_files == 'true'
       shell: bash
       run: |
         if [ -f vale_report.md ]; then
@@ -345,10 +408,10 @@ runs:
         fi
 
     - name: Upload Vale results
-      if: always() && steps.final-files-check.outputs.has_files == 'true'
+      if: always() && steps.final-files-check.outputs.has_files == 'true' && inputs.upload_artifact == 'true'
       uses: actions/upload-artifact@v6
       with:
-        name: vale-results
+        name: ${{ inputs.artifact_name }}
         path: |
           vale_report.md
           issue_counts.txt
