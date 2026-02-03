@@ -56,6 +56,44 @@ jobs:
         uses: elastic/vale-rules/lint@main
 ```
 
+### Action inputs
+
+The lint action supports these inputs:
+
+| Input | Description | Default |
+|-------|-------------|---------|
+| `files` | Files or directories to lint (space-separated). If not provided, lints changed files in PR. | `''` |
+| `include-paths` | Paths to include for linting (multi-line or space-separated). Supports glob patterns. Only files matching these paths will be linted. | `''` |
+| `fail_on_error` | Fail the action if Vale finds error-level issues. | `'false'` |
+| `vale_version` | Vale version to install. | `'latest'` |
+| `debug` | Enable debug output. | `'false'` |
+
+### Filtering specific paths
+
+Use `include-paths` to limit linting to specific directories. This is useful when multiple teams share a docs folder:
+
+```yaml
+- name: Run Vale Linter
+  uses: elastic/vale-rules/lint@main
+  with:
+    include-paths: |
+      docs/team-a
+      docs/team-b
+```
+
+With glob patterns:
+
+```yaml
+- name: Run Vale Linter
+  uses: elastic/vale-rules/lint@main
+  with:
+    include-paths: |
+      docs/guides/**
+      docs/reference/**
+```
+
+Space-separated format is also supported: `include-paths: "docs/team-a docs/team-b"`
+
 ```yaml
 # .github/workflows/vale-report.yml
 name: Vale Report
