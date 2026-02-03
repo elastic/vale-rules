@@ -29,3 +29,7 @@ This is just very important, please note that aka the realtime data.
 ## Exclamation test
 
 This is amazing! You should try it!
+
+## Vocab words don't break rules test
+
+Use a HTML Dashboard to view the Analytics data.

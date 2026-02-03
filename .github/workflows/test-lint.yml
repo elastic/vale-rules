@@ -101,6 +101,23 @@ jobs:
           
           echo "✓ All key rules verified"
 
+      - name: Verify vocab words don't break rules
+        run: |
+          # The test file has "Use a HTML Dashboard to view the Analytics data."
+          # where Dashboard and Analytics are vocab words. The Articles rule
+          # should still fire on "a HTML".
+          
+          # Count how many times Articles fires (should be at least 4: FAQ, HTML, SQL, and vocab test)
+          articles_count=$(grep -c "Elastic.Articles" vale_report.md || echo "0")
+          
+          if [ "$articles_count" -ge 4 ]; then
+            echo "✓ Elastic.Articles fired $articles_count times (including vocab word test)"
+          else
+            echo "::error::Expected at least 4 Articles violations but found $articles_count"
+            echo "Vocab words may be breaking the rule"
+            exit 1
+          fi
+
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v6
