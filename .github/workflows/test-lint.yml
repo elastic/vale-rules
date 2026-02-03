@@ -69,6 +69,37 @@ jobs:
 
           echo "✓ Issues detected as expected (total: $total)"
 
+      - name: Verify specific rules are working
+        run: |
+          echo "Checking that key rules fired..."
+          
+          # These rules should all trigger on sample-violations.md
+          rules_to_check=(
+            "Elastic.Articles"
+            "Elastic.BritishSpellings"
+            "Elastic.WordChoice"
+            "Elastic.OxfordComma"
+            "Elastic.Wordiness"
+            "Elastic.DontUse"
+            "Elastic.Exclamation"
+          )
+          
+          failed=0
+          for rule in "${rules_to_check[@]}"; do
+            if grep -q "$rule" vale_report.md; then
+              echo "✓ $rule fired"
+            else
+              echo "::error::$rule did not fire - rule may be broken"
+              failed=1
+            fi
+          done
+          
+          if [ "$failed" -eq 1 ]; then
+            exit 1
+          fi
+          
+          echo "✓ All key rules verified"
+
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v6
@@ -78,6 +109,47 @@ jobs:
             vale_report.md
             issue_counts.txt
           retention-days: 5
+
+  # Test that clean files produce no issues (no false positives)
+  test-clean-file:
+    name: Test clean file (no false positives)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run lint on clean file
+        id: lint-clean
+        uses: ./lint
+        with:
+          files: .github/test-fixtures/clean-doc.md
+          fail_on_error: 'true'  # Should pass since file is clean
+          use_local_styles: 'true'
+          disable_telemetry: 'true'
+          upload_artifact: 'false'
+          debug: 'true'
+
+      - name: Verify no issues found
+        run: |
+          if [ ! -f issue_counts.txt ]; then
+            echo "::error::issue_counts.txt was not generated"
+            exit 1
+          fi
+
+          source issue_counts.txt
+          total=$((errors + warnings + suggestions))
+
+          if [ "$total" -gt 0 ]; then
+            echo "::error::Clean file should have 0 issues but found $total"
+            echo "Report contents:"
+            cat vale_report.md
+            exit 1
+          fi
+
+          echo "✓ Clean file correctly produced no issues"
 
   # Test include_paths filtering
   test-include-paths:
@@ -129,7 +201,7 @@ jobs:
   upload-results:
     name: Upload combined results
     runs-on: ubuntu-latest
-    needs: [test-lint, test-include-paths]
+    needs: [test-lint, test-clean-file, test-include-paths]
     if: always()
 
     steps:
