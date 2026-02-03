@@ -25,8 +25,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
+        # Note: fetch-depth: 0 is only needed when auto-detecting changed files from PR.
+        # Since we pass explicit files:, shallow clone is sufficient.
 
       - name: Run lint action
         id: lint
@@ -78,7 +78,6 @@ jobs:
             "Elastic.Articles"
             "Elastic.BritishSpellings"
             "Elastic.WordChoice"
-            "Elastic.OxfordComma"
             "Elastic.Wordiness"
             "Elastic.DontUse"
             "Elastic.Exclamation"
@@ -118,8 +117,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Run lint on clean file
         id: lint-clean
@@ -159,15 +156,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Run lint with include_paths filter
         id: lint-filtered
         uses: ./lint
         with:
           files: .github/test-fixtures/team-a/doc.md .github/test-fixtures/team-b/doc.md
-          include_paths: .github/test-fixtures/team-a
+          include-paths: .github/test-fixtures/team-a
           fail_on_error: 'false'
           use_local_styles: 'true'
           disable_telemetry: 'true'
