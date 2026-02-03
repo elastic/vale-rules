@@ -25,8 +25,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        # Note: fetch-depth: 0 is only needed when auto-detecting changed files from PR.
-        # Since we pass explicit files:, shallow clone is sufficient.
+        with:
+          # Need full history for git diff in line range calculation
+          fetch-depth: 0
 
       - name: Run lint action
         id: lint
@@ -118,6 +119,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Run lint on clean file
         id: lint-clean
@@ -157,6 +160,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Run lint with include_paths filter
         id: lint-filtered
