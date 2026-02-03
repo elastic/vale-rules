@@ -71,7 +71,7 @@ jobs:
 
       - name: Upload test artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: test-results-${{ matrix.style_source }}
           path: |
@@ -79,12 +79,57 @@ jobs:
             issue_counts.txt
           retention-days: 5
 
+  # Test include_paths filtering
+  test-include-paths:
+    name: Test include_paths filtering
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run lint with include_paths filter
+        id: lint-filtered
+        uses: ./lint
+        with:
+          files: .github/test-fixtures/team-a/doc.md .github/test-fixtures/team-b/doc.md
+          include_paths: .github/test-fixtures/team-a
+          fail_on_error: 'false'
+          use_local_styles: 'true'
+          disable_telemetry: 'true'
+          upload_artifact: 'false'
+          debug: 'true'
+
+      - name: Verify filtering worked
+        run: |
+          if [ ! -f vale_report.md ]; then
+            echo "::error::vale_report.md was not generated"
+            exit 1
+          fi
+
+          # Check that team-a is in the report but team-b is not
+          if grep -q "team-a" vale_report.md; then
+            echo "✓ team-a files were linted"
+          else
+            echo "::error::team-a files should have been linted"
+            exit 1
+          fi
+
+          if grep -q "team-b" vale_report.md; then
+            echo "::error::team-b files should have been filtered out"
+            exit 1
+          else
+            echo "✓ team-b files were correctly filtered out"
+          fi
+
   # This job runs after all matrix jobs complete to upload a single artifact
   # that the report action can download
   upload-results:
     name: Upload combined results
     runs-on: ubuntu-latest
-    needs: test-lint
+    needs: [test-lint, test-include-paths]
     if: always()
 
     steps:
@@ -94,7 +139,7 @@ jobs:
           name: test-results-local
 
       - name: Upload as vale-results for report action
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: vale-results
           path: |
