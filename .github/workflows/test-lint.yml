@@ -78,6 +78,7 @@ jobs:
             "Elastic.Articles"
             "Elastic.BritishSpellings"
             "Elastic.WordChoice"
+            "Elastic.OxfordComma"
             "Elastic.Wordiness"
             "Elastic.DontUse"
             "Elastic.Exclamation"

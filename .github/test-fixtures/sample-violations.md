@@ -16,7 +16,7 @@ Simply whitelist the IP and blacklist the domain. This is easy.
 
 ## Oxford comma test
 
-The system supports indexing, searching and analytics.
+The system supports reading, writing and executing.
 
 ## Wordiness test
 
