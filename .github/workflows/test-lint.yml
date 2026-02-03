@@ -134,7 +134,7 @@ jobs:
 
     steps:
       - name: Download local styles results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: test-results-local
 
