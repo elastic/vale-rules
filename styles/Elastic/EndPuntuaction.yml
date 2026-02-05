@@ -7,4 +7,4 @@ scope: heading
 action:
   name: remove
 tokens:
-  - '[.?!]$'
+  - '[.!]$'
