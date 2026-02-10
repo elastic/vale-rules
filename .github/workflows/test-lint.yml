@@ -224,7 +224,7 @@ jobs:
 
     steps:
       - name: Download local styles results
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: test-results-local
 
