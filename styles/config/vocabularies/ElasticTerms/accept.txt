@@ -154,3 +154,12 @@ ECK
 (?i)winlog
 (?i)workpad
 Winlogbeat
+# Agent-triaged additions (round 2)
+(?i)agentbeat
+(?i)beatsauth
+(?i)elastican
+(?i)elasticapm
+(?i)elasticapmconnector
+(?i)elasticians
+(?i)elasticinframetrics
+(?i)functionbeat
