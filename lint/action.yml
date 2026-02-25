@@ -47,6 +47,10 @@ inputs:
     description: 'Name for the uploaded artifact (only used when upload_artifact is true)'
     required: false
     default: 'vale-results'
+  enable_spelling:
+    description: 'Enable the Elastic.Spelling rule (experimental). When false, spelling checks are skipped.'
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
@@ -167,6 +171,17 @@ runs:
         echo "Vale configured with local styles"
         echo "Styles copied from: ${SOURCE_PATH}/styles"
         ls -la .vale-styles/
+
+    - name: Apply feature flags to Vale config
+      if: inputs.enable_spelling != 'true'
+      shell: bash
+      run: |
+        # Disable spelling rule unless explicitly opted in.
+        # The [*.md] section should already exist in .vale.ini.temp;
+        # append the override at the end so it takes precedence.
+        echo "" >> .vale.ini.temp
+        echo "Elastic.Spelling = NO" >> .vale.ini.temp
+        echo "Spelling rule disabled (enable_spelling != true)"
 
     - name: Get changed files
       id: changed-files
