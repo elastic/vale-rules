@@ -5,7 +5,6 @@
 (?i)allowlist
 (?i)anonymization
 (?i)anonymized
-(?i)api
 (?i)apiserver
 (?i)applabel
 (?i)args
@@ -38,7 +37,6 @@
 (?i)config
 (?i)configs
 (?i)cron
-(?i)cpu
 (?i)csv
 (?i)cybersecurity
 (?i)datacenter
@@ -102,9 +100,7 @@
 (?i)hbs
 (?i)hostname
 (?i)hostnames
-(?i)http
 (?i)httpd
-(?i)https
 (?i)ilm
 (?i)imphash
 (?i)inode
@@ -118,7 +114,6 @@
 (?i)jks
 (?i)jms
 (?i)jmx
-(?i)json
 (?i)keepalive
 (?i)keepalives
 (?i)keypair
@@ -211,10 +206,8 @@
 (?i)slowlog
 (?i)snmp
 (?i)sns
-(?i)sql
 (?i)sprintf
 (?i)sqs
-(?i)ssl
 (?i)stacktrace
 (?i)statsd
 (?i)stderr
@@ -266,8 +259,6 @@
 (?i)unmarshalling
 (?i)unparsed
 (?i)untrusted
-(?i)uri
-(?i)url
 (?i)urls
 (?i)usec
 (?i)usecs
@@ -288,7 +279,6 @@
 (?i)wineventlog
 (?i)winlog
 (?i)workqueue
-(?i)xml
 (?i)xmpp
 (?i)yaml
 (?i)unix
@@ -493,7 +483,6 @@
 (?i)dropzone
 (?i)ethernet
 (?i)hostmetrics
-(?i)html
 (?i)hugepages
 (?i)impactful
 (?i)iis
@@ -935,12 +924,10 @@
 (?i)godoc
 (?i)gopls
 (?i)gorilla
-(?i)gpu
 (?i)gratia
 (?i)greylist
 (?i)gridlines
 (?i)gte
-(?i)gui
 (?i)guid
 (?i)gzipping
 (?i)hardcode
@@ -1251,7 +1238,6 @@
 (?i)suid
 (?i)supertest
 (?i)supervisorctl
-(?i)svg
 (?i)sw
 (?i)tailsampling
 (?i)tbd
