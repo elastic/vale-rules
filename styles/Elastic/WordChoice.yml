@@ -29,7 +29,7 @@ swap:
   may: "can, might"
   mute: "turn off, silence"
   sanity check: "review"
-  see: "refer to (if it's a document), view (if it's a UI element)"
+  '\bsee(?=\s+(?:the|our|this)\b|\s+\[)': "refer to (if it's a document), view (if it's a UI element)"
   simple: "efficient, basic"
   simply: "efficiently"
   skin-toned: "dark brown, cream, beige"
