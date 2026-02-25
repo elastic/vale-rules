@@ -13,4 +13,4 @@ swap:
   '\bvia\b': using
   '\bvice versa\b': and the reverse
   '\bvs\b': versus
-  '\betc\b': and so on
+  '(?<!/)\betc\b': and so on
