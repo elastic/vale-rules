@@ -24,39 +24,58 @@ import os
 import sys
 
 
-def parse_patterns(include_paths: str) -> list[str]:
-    """Parse include-paths input (handles multi-line and space-separated)."""
-    patterns = []
+def parse_patterns(include_paths: str) -> tuple[list[str], list[str]]:
+    """Parse include-paths input (handles multi-line and space-separated).
+
+    Patterns prefixed with ``!`` are treated as exclusions. Returns a tuple
+    of ``(include_patterns, exclude_patterns)`` with the ``!`` prefix stripped
+    from exclusion entries.
+    """
+    includes = []
+    excludes = []
     for line in include_paths.split('\n'):
         for pattern in line.split():
             pattern = pattern.strip().rstrip('/')
-            if pattern:
-                patterns.append(pattern)
-    return patterns
+            if not pattern:
+                continue
+            if pattern.startswith('!'):
+                negated = pattern[1:].rstrip('/')
+                if negated:
+                    excludes.append(negated)
+            else:
+                includes.append(pattern)
+    return includes, excludes
 
 
 def matches_pattern(file: str, pattern: str) -> bool:
     """Check if a file matches a pattern (glob or prefix)."""
-    # Use fnmatch for glob pattern matching
     if fnmatch.fnmatch(file, pattern):
         return True
-    # Simple prefix matching for directory patterns
     if file.startswith(pattern + '/'):
         return True
     return False
 
 
-def filter_files(files: list[str], patterns: list[str], debug: bool = False) -> list[str]:
-    """Filter files to only those matching any pattern."""
+def filter_files(
+    files: list[str],
+    includes: list[str],
+    excludes: list[str] | None = None,
+    debug: bool = False,
+) -> list[str]:
+    """Filter files to only those matching an include pattern and no exclude pattern."""
+    if excludes is None:
+        excludes = []
     filtered = []
     for file in files:
-        matched = any(matches_pattern(file, p) for p in patterns)
-        if matched:
+        matched = any(matches_pattern(file, p) for p in includes)
+        excluded = any(matches_pattern(file, p) for p in excludes)
+        if matched and not excluded:
             if debug:
                 print(f"::debug::File '{file}' matched", file=sys.stderr)
             filtered.append(file)
         elif debug:
-            print(f"::debug::File '{file}' excluded", file=sys.stderr)
+            reason = 'excluded by negation' if matched and excluded else 'no match'
+            print(f"::debug::File '{file}' excluded ({reason})", file=sys.stderr)
     return filtered
 
 
@@ -72,14 +91,16 @@ def main() -> int:
     include_paths = os.environ.get('INCLUDE_PATHS', '')
     debug = os.environ.get('DEBUG', 'false').lower() == 'true'
     
-    patterns = parse_patterns(include_paths)
+    includes, excludes = parse_patterns(include_paths)
     
-    if not patterns:
-        print('No patterns provided')
+    if not includes:
+        print('No include patterns provided')
         return 0
     
     if debug:
-        print(f'::debug::Patterns: {patterns}', file=sys.stderr)
+        print(f'::debug::Include patterns: {includes}', file=sys.stderr)
+        if excludes:
+            print(f'::debug::Exclude patterns: {excludes}', file=sys.stderr)
     
     # Read files to lint
     try:
@@ -89,10 +110,9 @@ def main() -> int:
         print('No files_to_lint.txt found')
         return 0
     
-    print(f'Filtering {len(files)} files against {len(patterns)} patterns...')
+    print(f'Filtering {len(files)} files against {len(includes)} include and {len(excludes)} exclude patterns...')
     
-    # Filter files
-    filtered = filter_files(files, patterns, debug)
+    filtered = filter_files(files, includes, excludes, debug)
     
     # Write results
     if filtered:

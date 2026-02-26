@@ -12,7 +12,7 @@ inputs:
     required: false
     default: ''
   include-paths:
-    description: 'Paths to include for linting. Supports glob patterns. Can be space-separated or multi-line. Only files matching these paths will be linted.'
+    description: 'Paths to include for linting. Supports glob patterns and ! negation to exclude paths. Can be space-separated or multi-line. Only files matching these paths will be linted.'
     required: false
     default: ''
   fail_on_error:
