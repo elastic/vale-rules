@@ -188,7 +188,9 @@ runs:
 
         while IFS= read -r line; do
           # Skip blank lines, comments, and section headers
-          [[ -z "$line" || "$line" =~ ^[[:space:]]*# || "$line" =~ ^[[:space:]]*\[ ]] && continue
+          [[ -z "$line" ]] && continue
+          [[ "$line" =~ ^[[:space:]]*# ]] && continue
+          [[ "$line" =~ ^[[:space:]]*\[ ]] && continue
 
           key=$(echo "$line" | sed 's/[[:space:]]*=.*//')
           escaped_key=$(echo "$key" | sed 's/\./\\./g')
@@ -197,8 +199,7 @@ runs:
             sed -i "s/^${escaped_key}[[:space:]]*=.*/${line}/" .vale.ini.temp
             echo "  Replaced: ${line}"
           else
-            sed -i "/^\[\\*\\.md\]/a\\
-${line}" .vale.ini.temp
+            sed -i "/^\[\\*\\.md\]/a ${line}" .vale.ini.temp
             echo "  Inserted: ${line}"
           fi
         done < "$OVERRIDE_FILE"
