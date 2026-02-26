@@ -214,9 +214,8 @@ jobs:
             echo "✓ team-b files were correctly filtered out"
           fi
 
-  # Test that spelling is disabled by default
-  test-spelling-off-by-default:
-    name: Test spelling off by default
+  test-repo-override:
+    name: Test repo-level Vale overrides
     runs-on: ubuntu-latest
 
     steps:
@@ -225,8 +224,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run lint without enable_spelling
-        id: lint-no-spelling
+      - name: Run lint without override (spelling should be off by default)
+        id: lint-no-override
         uses: ./lint
         with:
           files: .github/test-fixtures/spelling-test.md
@@ -236,7 +235,7 @@ jobs:
           upload_artifact: 'false'
           debug: 'true'
 
-      - name: Verify spelling rule did NOT fire
+      - name: Verify spelling did NOT fire without override
         run: |
           if [ ! -f vale_report.md ]; then
             echo "::error::vale_report.md was not generated"
@@ -244,37 +243,28 @@ jobs:
           fi
 
           if grep -q "Elastic.Spelling" vale_report.md; then
-            echo "::error::Elastic.Spelling fired but enable_spelling was not set"
-            echo "The spelling rule should be disabled by default"
+            echo "::error::Elastic.Spelling fired without an override — it should be off by default"
             exit 1
           fi
 
           echo "✓ Elastic.Spelling correctly disabled by default"
+          rm -f vale_report.md issue_counts.txt
 
-  # Test that spelling fires when opted in
-  test-spelling-opt-in:
-    name: Test spelling opt-in
-    runs-on: ubuntu-latest
+      - name: Place override file in repo root
+        run: cp .github/test-fixtures/vale-overrides/.vale-overrides.ini .vale-overrides.ini
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Run lint with enable_spelling
-        id: lint-spelling
+      - name: Run lint with override (spelling should fire)
+        id: lint-override
         uses: ./lint
         with:
           files: .github/test-fixtures/spelling-test.md
-          enable_spelling: 'true'
           fail_on_error: 'false'
           use_local_styles: 'true'
           disable_telemetry: 'true'
           upload_artifact: 'false'
           debug: 'true'
 
-      - name: Verify spelling rule fired
+      - name: Verify spelling fired via override
         run: |
           if [ ! -f vale_report.md ]; then
             echo "::error::vale_report.md was not generated"
@@ -284,9 +274,9 @@ jobs:
           spelling_count=$(grep -c "Elastic.Spelling" vale_report.md || echo "0")
 
           if [ "$spelling_count" -ge 2 ]; then
-            echo "✓ Elastic.Spelling fired $spelling_count times with enable_spelling: true"
+            echo "✓ Elastic.Spelling fired $spelling_count times via .vale-overrides.ini"
           else
-            echo "::error::Expected at least 2 Elastic.Spelling hits but found $spelling_count"
+            echo "::error::Expected at least 2 Elastic.Spelling hits from repo override but found $spelling_count"
             echo "Report contents:"
             cat vale_report.md
             exit 1
@@ -297,7 +287,7 @@ jobs:
   upload-results:
     name: Upload combined results
     runs-on: ubuntu-latest
-    needs: [test-lint, test-clean-file, test-include-paths, test-spelling-off-by-default, test-spelling-opt-in]
+    needs: [test-lint, test-clean-file, test-include-paths, test-repo-override]
     if: always()
 
     steps:
