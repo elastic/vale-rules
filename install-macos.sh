@@ -158,15 +158,14 @@ fi
 # 7. Apply optional rule overrides
 if [ "$ENABLE_SPELLING" = true ]; then
     print_info "Enabling experimental spelling rule..."
-    # Append override after the package line so it takes effect after merge
-    if ! grep -q "Elastic.Spelling" "$VALE_CONFIG_FILE"; then
-        echo "" >> "$VALE_CONFIG_FILE"
-        echo "[*.md]" >> "$VALE_CONFIG_FILE"
-        echo "Elastic.Spelling = YES" >> "$VALE_CONFIG_FILE"
+    PACKAGE_CONFIG="$VALE_STYLES_DIR/.vale-config/0-elastic-vale.ini"
+    if [ -f "$PACKAGE_CONFIG" ] && grep -q "Elastic\.Spelling" "$PACKAGE_CONFIG"; then
+        sed -i '' 's/Elastic\.Spelling = NO/Elastic.Spelling = YES/' "$PACKAGE_CONFIG"
+        print_success "✓ Spelling rule enabled"
     else
-        sed -i '' 's/Elastic\.Spelling = NO/Elastic.Spelling = YES/' "$VALE_CONFIG_FILE"
+        print_error "Could not find packaged config to enable spelling"
+        print_info "You can enable it manually by editing: $PACKAGE_CONFIG"
     fi
-    print_success "✓ Spelling rule enabled"
 fi
 
 # 8. Verify that the installed styles are accessible
