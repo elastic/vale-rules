@@ -186,8 +186,15 @@ runs:
 
         echo "Applying repo-level Vale overrides from ${OVERRIDE_FILE}"
 
+        # Collect all config files that need patching:
+        # 1. The main temp config
+        # 2. Any packaged configs (from vale sync) that override the main config
+        CONFIG_FILES=".vale.ini.temp"
+        for pkg_config in .vale-styles/.vale-config/*.ini; do
+          [ -f "$pkg_config" ] && CONFIG_FILES="$CONFIG_FILES $pkg_config"
+        done
+
         while IFS= read -r line; do
-          # Skip blank lines, comments, and section headers
           [[ -z "$line" ]] && continue
           [[ "$line" =~ ^[[:space:]]*# ]] && continue
           [[ "$line" =~ ^[[:space:]]*\[ ]] && continue
@@ -195,10 +202,15 @@ runs:
           key=$(echo "$line" | sed 's/[[:space:]]*=.*//')
           escaped_key=$(echo "$key" | sed 's/\./\\./g')
 
-          if grep -q "^${escaped_key}[[:space:]]*=" .vale.ini.temp; then
-            sed -i "s/^${escaped_key}[[:space:]]*=.*/${line}/" .vale.ini.temp
-            echo "  Replaced: ${line}"
-          else
+          for cfg in $CONFIG_FILES; do
+            if grep -q "^${escaped_key}[[:space:]]*=" "$cfg"; then
+              sed -i "s/^${escaped_key}[[:space:]]*=.*/${line}/" "$cfg"
+              echo "  Replaced in $(basename "$cfg"): ${line}"
+            fi
+          done
+
+          # If the key wasn't in any config, insert it into the main config
+          if ! grep -rq "^${escaped_key}[[:space:]]*=" $CONFIG_FILES; then
             sed -i "/^\[\\*\\.md\]/a ${line}" .vale.ini.temp
             echo "  Inserted: ${line}"
           fi
@@ -207,6 +219,9 @@ runs:
         if [ "${DEBUG}" == "true" ]; then
           echo "::debug::Final Vale config:"
           cat .vale.ini.temp
+          for pkg_config in .vale-styles/.vale-config/*.ini; do
+            [ -f "$pkg_config" ] && echo "::debug::Package config $(basename "$pkg_config"):" && cat "$pkg_config"
+          done
         fi
 
     - name: Get changed files
