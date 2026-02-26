@@ -88,16 +88,11 @@ The lint action supports these inputs:
 You can customize which Vale rules are enabled, disabled, or set to a different severity on a per-repo basis. Add a `.vale-overrides.ini` file to your repository root (or `.github/.vale-overrides.ini`):
 
 ```ini
-# Enable the experimental spelling rule
 Elastic.Spelling = YES
-
-# Downgrade a rule to suggestions instead of warnings
 Elastic.We = suggestion
 ```
 
-The lint action automatically detects this file and appends its contents to the Vale configuration. Overrides are applied last, so they take precedence over the default settings.
-
-This works both in CI (the lint action detects the file) and locally when running Vale with the `--config` flag pointing to your repo's config.
+The lint action automatically detects this file and merges it into the Vale configuration. For existing keys, values are replaced in place. For new keys, they are inserted into the `[*.md]` section. Section headers in the override file are ignored.
 
 ### Filtering specific paths
 

@@ -179,17 +179,33 @@ runs:
           OVERRIDE_FILE=".github/.vale-overrides.ini"
         fi
 
-        if [ -n "$OVERRIDE_FILE" ]; then
-          echo "Applying repo-level Vale overrides from ${OVERRIDE_FILE}"
-          echo "" >> .vale.ini.temp
-          echo "# --- Repo overrides from ${OVERRIDE_FILE} ---" >> .vale.ini.temp
-          cat "$OVERRIDE_FILE" >> .vale.ini.temp
-          if [ "${DEBUG}" == "true" ]; then
-            echo "::debug::Override contents:"
-            cat "$OVERRIDE_FILE"
-          fi
-        else
+        if [ -z "$OVERRIDE_FILE" ]; then
           echo "No repo-level Vale overrides found (.vale-overrides.ini or .github/.vale-overrides.ini)"
+          exit 0
+        fi
+
+        echo "Applying repo-level Vale overrides from ${OVERRIDE_FILE}"
+
+        while IFS= read -r line; do
+          # Skip blank lines, comments, and section headers
+          [[ -z "$line" || "$line" =~ ^[[:space:]]*# || "$line" =~ ^[[:space:]]*\[ ]] && continue
+
+          key=$(echo "$line" | sed 's/[[:space:]]*=.*//')
+          escaped_key=$(echo "$key" | sed 's/\./\\./g')
+
+          if grep -q "^${escaped_key}[[:space:]]*=" .vale.ini.temp; then
+            sed -i "s/^${escaped_key}[[:space:]]*=.*/${line}/" .vale.ini.temp
+            echo "  Replaced: ${line}"
+          else
+            sed -i "/^\[\\*\\.md\]/a\\
+${line}" .vale.ini.temp
+            echo "  Inserted: ${line}"
+          fi
+        done < "$OVERRIDE_FILE"
+
+        if [ "${DEBUG}" == "true" ]; then
+          echo "::debug::Final Vale config:"
+          cat .vale.ini.temp
         fi
 
     - name: Get changed files
