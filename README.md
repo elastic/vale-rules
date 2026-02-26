@@ -22,6 +22,21 @@ Invoke-WebRequest -Uri https://raw.githubusercontent.com/elastic/vale-rules/main
 powershell -ExecutionPolicy Bypass -File .\install-windows.ps1
 ```
 
+### Installer options
+
+The macOS installer supports the following flags:
+
+| Flag | Description |
+|------|-------------|
+| `--enable-spelling` | Enable the experimental `Elastic.Spelling` rule. |
+| `--help` | Show usage information. |
+
+For example, to install with spelling checks enabled:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/elastic/vale-rules/main/install-macos.sh | bash -s -- --enable-spelling
+```
+
 ## Install the VS Code extension
 
 Install the [Vale VSCode](https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode) extension to view Vale checks when saving a document.
@@ -67,6 +82,17 @@ The lint action supports these inputs:
 | `fail_on_error` | Fail the action if Vale finds error-level issues. | `'false'` |
 | `vale_version` | Vale version to install. | `'latest'` |
 | `debug` | Enable debug output. | `'false'` |
+
+### Per-repo rule overrides
+
+You can customize which Vale rules are enabled, disabled, or set to a different severity on a per-repo basis. Add a `.vale-overrides.ini` file to your repository root (or `.github/.vale-overrides.ini`):
+
+```ini
+Elastic.Spelling = YES
+Elastic.We = suggestion
+```
+
+The lint action automatically detects this file and merges it into the Vale configuration. For existing keys, values are replaced in place. For new keys, they are inserted into the `[*.md]` section. Section headers in the override file are ignored.
 
 ### Filtering specific paths
 
@@ -136,15 +162,53 @@ This two-workflow approach ensures fork PRs are linted safely while still postin
 
 Refer to [ACTION_USAGE.md](ACTION_USAGE.md) for detailed documentation and examples.
 
+## Spelling rule (experimental)
+
+The `Elastic.Spelling` rule checks documentation for misspellings using Vale's built-in Hunspell-based spell checker with the American English dictionary. It is **disabled by default** and can be enabled per repo or per local installation.
+
+The rule includes regex filters to reduce false positives common in technical documentation (camelCase identifiers, uppercase acronyms, CLI flags, file extensions, underscore-prefixed Elasticsearch fields, and more). Three vocabulary files provide additional accepted terms:
+
+- **ElasticTerms** — Elastic product names, features, and abbreviations.
+- **ThirdPartyProducts** — Vendor names, third-party tools, and integrations.
+- **TechJargon** — Generic computing, networking, and development terms.
+
+### Enable spelling in CI
+
+Add a `.vale-overrides.ini` to your repository root:
+
+```ini
+Elastic.Spelling = YES
+```
+
+The lint action picks this up automatically. No workflow changes are needed.
+
+### Enable spelling locally
+
+Pass the `--enable-spelling` flag when installing or updating:
+
+```bash
+# macOS
+curl -fsSL https://raw.githubusercontent.com/elastic/vale-rules/main/install-macos.sh | bash -s -- --enable-spelling
+```
+
+Or add the override manually to your local Vale config:
+
+```ini
+[*.md]
+Elastic.Spelling = YES
+```
+
 ## Folder structure
 
-- `action.yml` - GitHub Action definition for using this as a reusable action
-- `ACTION_USAGE.md` - Detailed documentation for using the GitHub Action
-- `install-macos.sh` - Automated installation script for macOS
-- `install-linux.sh` - Automated installation script for Linux
-- `install-windows.ps1` - Automated installation script for Windows
-- `styles/Elastic/` - Contains the Elastic linting rules for Vale. See [Styles](https://vale.sh/docs/topics/styles/)
-- `.github/workflows/` - CI/CD workflows for testing and releases
+- `lint/action.yml` - GitHub Composite Action for running the Vale linter.
+- `report/action.yml` - GitHub Composite Action for posting Vale results as PR comments.
+- `ACTION_USAGE.md` - Detailed documentation for using the GitHub Action.
+- `install-macos.sh` - Automated installation script for macOS.
+- `install-linux.sh` - Automated installation script for Linux.
+- `install-windows.ps1` - Automated installation script for Windows.
+- `styles/Elastic/` - Elastic linting rules for Vale. See [Styles](https://vale.sh/docs/topics/styles/).
+- `styles/config/vocabularies/` - Vocabulary files for accepted terms (ElasticTerms, ThirdPartyProducts, TechJargon).
+- `.github/workflows/` - CI/CD workflows for testing and releases.
 
 The installation scripts create Vale configurations at platform-specific locations:
 
