@@ -47,7 +47,6 @@ inputs:
     description: 'Name for the uploaded artifact (only used when upload_artifact is true)'
     required: false
     default: 'vale-results'
-
 runs:
   using: 'composite'
   steps:
@@ -167,6 +166,63 @@ runs:
         echo "Vale configured with local styles"
         echo "Styles copied from: ${SOURCE_PATH}/styles"
         ls -la .vale-styles/
+
+    - name: Apply repo-level Vale overrides
+      shell: bash
+      env:
+        DEBUG: ${{ inputs.debug }}
+      run: |
+        OVERRIDE_FILE=""
+        if [ -f ".vale-overrides.ini" ]; then
+          OVERRIDE_FILE=".vale-overrides.ini"
+        elif [ -f ".github/.vale-overrides.ini" ]; then
+          OVERRIDE_FILE=".github/.vale-overrides.ini"
+        fi
+
+        if [ -z "$OVERRIDE_FILE" ]; then
+          echo "No repo-level Vale overrides found (.vale-overrides.ini or .github/.vale-overrides.ini)"
+          exit 0
+        fi
+
+        echo "Applying repo-level Vale overrides from ${OVERRIDE_FILE}"
+
+        # Collect all config files that need patching:
+        # 1. The main temp config
+        # 2. Any packaged configs (from vale sync) that override the main config
+        CONFIG_FILES=".vale.ini.temp"
+        for pkg_config in .vale-styles/.vale-config/*.ini; do
+          [ -f "$pkg_config" ] && CONFIG_FILES="$CONFIG_FILES $pkg_config"
+        done
+
+        while IFS= read -r line; do
+          [[ -z "$line" ]] && continue
+          [[ "$line" =~ ^[[:space:]]*# ]] && continue
+          [[ "$line" =~ ^[[:space:]]*\[ ]] && continue
+
+          key=$(echo "$line" | sed 's/[[:space:]]*=.*//')
+          escaped_key=$(echo "$key" | sed 's/\./\\./g')
+
+          for cfg in $CONFIG_FILES; do
+            if grep -q "^${escaped_key}[[:space:]]*=" "$cfg"; then
+              sed -i "s/^${escaped_key}[[:space:]]*=.*/${line}/" "$cfg"
+              echo "  Replaced in $(basename "$cfg"): ${line}"
+            fi
+          done
+
+          # If the key wasn't in any config, insert it into the main config
+          if ! grep -rq "^${escaped_key}[[:space:]]*=" $CONFIG_FILES; then
+            sed -i "/^\[\\*\\.md\]/a ${line}" .vale.ini.temp
+            echo "  Inserted: ${line}"
+          fi
+        done < "$OVERRIDE_FILE"
+
+        if [ "${DEBUG}" == "true" ]; then
+          echo "::debug::Final Vale config:"
+          cat .vale.ini.temp
+          for pkg_config in .vale-styles/.vale-config/*.ini; do
+            [ -f "$pkg_config" ] && echo "::debug::Package config $(basename "$pkg_config"):" && cat "$pkg_config"
+          done
+        fi
 
     - name: Get changed files
       id: changed-files

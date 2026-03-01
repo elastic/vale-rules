@@ -9,6 +9,26 @@
 
 set -e  # Exit on any error
 
+# Parse flags
+ENABLE_SPELLING=false
+for arg in "$@"; do
+    case "$arg" in
+        --enable-spelling) ENABLE_SPELLING=true ;;
+        -h|--help)
+            echo "Usage: $0 [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --enable-spelling  Enable the experimental Elastic.Spelling rule"
+            echo "  -h, --help         Show this help message"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $arg (use --help for usage)"
+            exit 1
+            ;;
+    esac
+done
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -135,7 +155,20 @@ else
     exit 1
 fi
 
-# 7. Verify that the installed styles are accessible
+# 7. Apply optional rule overrides
+if [ "$ENABLE_SPELLING" = true ]; then
+    print_info "Enabling experimental spelling rule..."
+    PACKAGE_CONFIG="$VALE_STYLES_DIR/.vale-config/0-elastic-vale.ini"
+    if [ -f "$PACKAGE_CONFIG" ] && grep -q "Elastic\.Spelling" "$PACKAGE_CONFIG"; then
+        sed -i '' 's/Elastic\.Spelling = NO/Elastic.Spelling = YES/' "$PACKAGE_CONFIG"
+        print_success "✓ Spelling rule enabled"
+    else
+        print_error "Could not find packaged config to enable spelling"
+        print_info "You can enable it manually by editing: $PACKAGE_CONFIG"
+    fi
+fi
+
+# 8. Verify that the installed styles are accessible
 print_info "Verifying installed style guide..."
 if [ -d "$VALE_STYLES_DIR/Elastic" ] && ls "$VALE_STYLES_DIR/Elastic"/*.yml > /dev/null 2>&1; then
     # Check if VERSION file exists and read it
@@ -150,7 +183,7 @@ else
     exit 1
 fi
 
-# 8. Final verification
+# 9. Final verification
 print_info "Performing final verification..."
 if vale --config="$VALE_CONFIG_FILE" --help &> /dev/null; then
     print_success "✓ Vale configuration is valid"
@@ -159,7 +192,7 @@ else
     exit 1
 fi
 
-# 9. Success message
+# 10. Success message
 echo
 print_success "🎉 Installation completed successfully!"
 echo
@@ -170,6 +203,12 @@ fi
 echo "Vale is now configured with the Elastic style guide. You can:"
 echo "  • Run 'vale <file>' to check a specific file"
 echo "  • Run 'vale <directory>' to check all supported files in a directory"
+echo
+if [ "$ENABLE_SPELLING" = true ]; then
+    echo "Spelling rule: ENABLED (experimental)"
+else
+    echo "Spelling rule: disabled (run with --enable-spelling to enable)"
+fi
 echo
 echo "Configuration file location: $VALE_CONFIG_FILE"
 echo "Styles installed to: $VALE_STYLES_DIR/Elastic"
