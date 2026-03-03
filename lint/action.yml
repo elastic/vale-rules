@@ -190,9 +190,11 @@ runs:
         # 1. The main temp config
         # 2. Any packaged configs (from vale sync) that override the main config
         CONFIG_FILES=".vale.ini.temp"
+        shopt -s nullglob
         for pkg_config in .vale-styles/.vale-config/*.ini; do
-          [ -f "$pkg_config" ] && CONFIG_FILES="$CONFIG_FILES $pkg_config"
+          CONFIG_FILES="$CONFIG_FILES $pkg_config"
         done
+        shopt -u nullglob
 
         while IFS= read -r line; do
           [[ -z "$line" ]] && continue
@@ -219,9 +221,12 @@ runs:
         if [ "${DEBUG}" == "true" ]; then
           echo "::debug::Final Vale config:"
           cat .vale.ini.temp
+          shopt -s nullglob
           for pkg_config in .vale-styles/.vale-config/*.ini; do
-            [ -f "$pkg_config" ] && echo "::debug::Package config $(basename "$pkg_config"):" && cat "$pkg_config"
+            echo "::debug::Package config $(basename "$pkg_config"):"
+            cat "$pkg_config"
           done
+          shopt -u nullglob
         fi
 
     - name: Get changed files
