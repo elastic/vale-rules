@@ -470,7 +470,7 @@ runs:
 
     - name: Upload Vale results
       if: always() && steps.final-files-check.outputs.has_files == 'true' && inputs.upload_artifact == 'true'
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact_name }}
         path: |
