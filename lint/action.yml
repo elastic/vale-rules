@@ -238,14 +238,14 @@ runs:
         if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
           echo "Detecting changed files in PR..."
           git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
-            | grep -E '\.(md|adoc)$' > changed_files.txt || echo "No markdown/adoc files changed"
+            | grep -E '\.md$' > changed_files.txt || echo "No markdown files changed"
 
           if [ -s changed_files.txt ]; then
             echo "Found changed files:"
             cat changed_files.txt
             echo "has_changes=true" >> $GITHUB_OUTPUT
           else
-            echo "No markdown or adoc files changed in this PR"
+            echo "No markdown files changed in this PR"
             echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
         else
@@ -261,8 +261,13 @@ runs:
       run: |
         if [ -n "${INPUT_FILES}" ]; then
           echo "Using provided files: ${INPUT_FILES}"
-          echo "${INPUT_FILES}" | tr ' ' '\n' > files_to_lint.txt
-          echo "has_files=true" >> $GITHUB_OUTPUT
+          echo "${INPUT_FILES}" | tr ' ' '\n' | grep -E '\.md$' > files_to_lint.txt || true
+          if [ -s files_to_lint.txt ]; then
+            echo "has_files=true" >> $GITHUB_OUTPUT
+          else
+            echo "No markdown files in provided file list"
+            echo "has_files=false" >> $GITHUB_OUTPUT
+          fi
         elif [ "${{ steps.changed-files.outputs.has_changes }}" == "true" ]; then
           echo "Using changed files from PR"
           cp changed_files.txt files_to_lint.txt
