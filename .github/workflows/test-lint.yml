@@ -128,6 +128,18 @@ jobs:
             issue_counts.txt
           retention-days: 5
 
+  # Run Python unit tests for supporting scripts
+  test-python:
+    name: Test Python scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run path_filter tests
+        run: python3 -m unittest lint/test_path_filter.py -v
+
   # Test that clean files produce no issues (no false positives)
   test-clean-file:
     name: Test clean file (no false positives)
@@ -336,7 +348,7 @@ jobs:
     name: Upload combined results
     runs-on: ubuntu-latest
     needs: [test-lint, test-clean-file, test-include-paths, test-include-paths-negation, test-repo-override]
-    if: always()
+    if: always() && needs.test-lint.result == 'success'
 
     steps:
       - name: Download local styles results

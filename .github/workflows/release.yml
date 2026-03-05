@@ -26,21 +26,21 @@ jobs:
         
       - name: Create tag if manual dispatch
         if: github.event_name == 'workflow_dispatch'
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          VERSION="${{ inputs.version }}"
-          
           # Validate version format (must start with 'v' followed by semantic version)
           if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)?$ ]]; then
             echo "Error: Version must follow semantic versioning format (e.g., v1.0.0, v1.0.0-beta.1)"
             exit 1
           fi
-          
+
           # Check if tag already exists (both locally and remotely)
           if git rev-parse "$VERSION" >/dev/null 2>&1 || git ls-remote --tags origin | grep -q "refs/tags/$VERSION$"; then
             echo "Error: Tag $VERSION already exists"
             exit 1
           fi
-          
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "$VERSION" -m "Release $VERSION"
@@ -48,10 +48,13 @@ jobs:
         
       - name: Extract version from tag
         id: get_version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "VERSION=$INPUT_VERSION" >> $GITHUB_OUTPUT
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
             echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           else
             echo "VERSION=manual-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
