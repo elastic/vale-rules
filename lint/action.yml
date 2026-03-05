@@ -71,39 +71,31 @@ runs:
 
         echo "✓ All dependencies are available"
 
-    - name: Detect OS
-      id: detect-os
+    - name: Install Vale
       shell: bash
+      env:
+        VALE_VERSION: ${{ inputs.vale_version }}
       run: |
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-          echo "os=macos" >> $GITHUB_OUTPUT
-        elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-          echo "os=linux" >> $GITHUB_OUTPUT
-        else
-          echo "os=unknown" >> $GITHUB_OUTPUT
+        if command -v vale &> /dev/null; then
+          echo "Vale is already installed: $(vale --version)"
+          exit 0
         fi
 
-    - name: Install Vale (macOS)
-      if: steps.detect-os.outputs.os == 'macos'
-      shell: bash
-      run: |
-        if ! command -v vale &> /dev/null; then
-          echo "Installing Vale via Homebrew..."
-          brew install vale
+        echo "Installing Vale..."
+
+        if [ "$VALE_VERSION" == "latest" ]; then
+          # Get the latest release tag from GitHub
+          VALE_VERSION=$(curl -s https://api.github.com/repos/errata-ai/vale/releases/latest | jq -r '.tag_name' | sed 's/^v//')
         else
-          echo "Vale is already installed: $(vale --version)"
+          # Strip leading 'v' if present
+          VALE_VERSION="${VALE_VERSION#v}"
         fi
 
-    - name: Install Vale (Linux)
-      if: steps.detect-os.outputs.os == 'linux'
-      shell: bash
-      run: |
-        if ! command -v vale &> /dev/null; then
-          echo "Installing Vale via snap..."
-          sudo snap install vale
-        else
-          echo "Vale is already installed: $(vale --version)"
-        fi
+        echo "Installing Vale v${VALE_VERSION}..."
+        curl -sL "https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz" \
+          | sudo tar xz -C /usr/local/bin vale
+
+        echo "Installed: $(vale --version)"
 
     - name: Configure Vale with released styles
       if: inputs.use_local_styles != 'true'
@@ -373,29 +365,34 @@ runs:
         fi
 
         echo "Running Vale on files..."
-        
+
         # Show files to lint
         echo "Files to lint:"
         cat files_to_lint.txt
-        
+
         # Verify Vale config exists
         if [ ! -f .vale.ini.temp ]; then
           echo "::error::Vale config file .vale.ini.temp not found"
           exit 1
         fi
-        
+
         # Verify styles were downloaded
         if [ ! -d .vale-styles ]; then
           echo "::error::Vale styles directory .vale-styles not found. Vale sync may have failed."
           exit 1
         fi
 
-        # Run Vale with JSON output on all files
+        # Run Vale with JSON output on all files, with a 5-minute timeout to prevent hangs
         # Capture stderr separately to avoid corrupting JSON output
         VALE_STDERR=$(mktemp)
         VALE_EXIT=0
-        vale --config=.vale.ini.temp --output=JSON $(cat files_to_lint.txt | tr '\n' ' ') > vale_output.json 2>"$VALE_STDERR" || VALE_EXIT=$?
-        
+        timeout 300 vale --config=.vale.ini.temp --output=JSON $(cat files_to_lint.txt | tr '\n' ' ') > vale_output.json 2>"$VALE_STDERR" || VALE_EXIT=$?
+
+        if [ $VALE_EXIT -eq 124 ]; then
+          echo "::error::Vale timed out after 5 minutes"
+          exit 1
+        fi
+
         if [ $VALE_EXIT -ne 0 ]; then
           echo "Vale exited with code $VALE_EXIT"
           if [ -s "$VALE_STDERR" ]; then
