@@ -75,6 +75,7 @@ runs:
       shell: bash
       env:
         VALE_VERSION: ${{ inputs.vale_version }}
+        GH_TOKEN: ${{ github.token }}
       run: |
         if command -v vale &> /dev/null; then
           echo "Vale is already installed: $(vale --version)"
@@ -84,15 +85,20 @@ runs:
         echo "Installing Vale..."
 
         if [ "$VALE_VERSION" == "latest" ]; then
-          # Get the latest release tag from GitHub
-          VALE_VERSION=$(curl -s https://api.github.com/repos/errata-ai/vale/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+          # Get the latest release tag from GitHub (use token to avoid rate limits)
+          VALE_VERSION=$(curl -s -H "Authorization: token ${GH_TOKEN}" \
+            https://api.github.com/repos/errata-ai/vale/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+          if [ -z "$VALE_VERSION" ] || [ "$VALE_VERSION" == "null" ]; then
+            echo "::error::Failed to determine latest Vale version from GitHub API"
+            exit 1
+          fi
         else
           # Strip leading 'v' if present
           VALE_VERSION="${VALE_VERSION#v}"
         fi
 
         echo "Installing Vale v${VALE_VERSION}..."
-        curl -sL "https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz" \
+        curl -sfL "https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz" \
           | sudo tar xz -C /usr/local/bin vale
 
         echo "Installed: $(vale --version)"
