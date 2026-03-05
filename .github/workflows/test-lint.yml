@@ -138,7 +138,8 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run path_filter tests
-        run: python3 -m unittest lint/test_path_filter.py -v
+        working-directory: lint
+        run: python3 -m unittest test_path_filter -v
 
   # Test that clean files produce no issues (no false positives)
   test-clean-file:

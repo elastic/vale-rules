@@ -352,7 +352,6 @@ runs:
     - name: Run Vale and generate report
       id: vale-report
       if: steps.final-files-check.outputs.has_files == 'true'
-      timeout-minutes: 5
       shell: bash
       env:
         GITHUB_REPOSITORY: ${{ github.repository }}
@@ -366,29 +365,34 @@ runs:
         fi
 
         echo "Running Vale on files..."
-        
+
         # Show files to lint
         echo "Files to lint:"
         cat files_to_lint.txt
-        
+
         # Verify Vale config exists
         if [ ! -f .vale.ini.temp ]; then
           echo "::error::Vale config file .vale.ini.temp not found"
           exit 1
         fi
-        
+
         # Verify styles were downloaded
         if [ ! -d .vale-styles ]; then
           echo "::error::Vale styles directory .vale-styles not found. Vale sync may have failed."
           exit 1
         fi
 
-        # Run Vale with JSON output on all files
+        # Run Vale with JSON output on all files, with a 5-minute timeout to prevent hangs
         # Capture stderr separately to avoid corrupting JSON output
         VALE_STDERR=$(mktemp)
         VALE_EXIT=0
-        vale --config=.vale.ini.temp --output=JSON $(cat files_to_lint.txt | tr '\n' ' ') > vale_output.json 2>"$VALE_STDERR" || VALE_EXIT=$?
-        
+        timeout 300 vale --config=.vale.ini.temp --output=JSON $(cat files_to_lint.txt | tr '\n' ' ') > vale_output.json 2>"$VALE_STDERR" || VALE_EXIT=$?
+
+        if [ $VALE_EXIT -eq 124 ]; then
+          echo "::error::Vale timed out after 5 minutes"
+          exit 1
+        fi
+
         if [ $VALE_EXIT -ne 0 ]; then
           echo "Vale exited with code $VALE_EXIT"
           if [ -s "$VALE_STDERR" ]; then
