@@ -221,19 +221,44 @@ runs:
           shopt -u nullglob
         fi
 
+    - name: Fetch base branch for diff
+      id: fetch-base
+      if: github.event.pull_request.base.sha != ''
+      shell: bash
+      run: |
+        # Fetch base branch by name (GitHub does not support fetching by SHA).
+        # Stores the resolved SHA so both "Get changed files" and "Get modified
+        # line ranges" can use it without a second fetch.
+        if git fetch --depth=1 origin ${{ github.base_ref }} 2>&1; then
+          BASE_SHA=$(git rev-parse FETCH_HEAD)
+          echo "base_sha=${BASE_SHA}" >> $GITHUB_OUTPUT
+          echo "Fetched base branch '${{ github.base_ref }}' at ${BASE_SHA}"
+        else
+          echo "base_sha=" >> $GITHUB_OUTPUT
+          echo "::warning::Could not fetch base branch '${{ github.base_ref }}'. Changed-file detection and line-range filtering will be skipped."
+        fi
+
     - name: Get changed files
       id: changed-files
       if: inputs.files == ''
       shell: bash
       run: |
-        # Only get changed files if running in a PR context
-        if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+        # Only get changed files if running in a PR context with a fetched base
+        BASE_SHA="${{ steps.fetch-base.outputs.base_sha }}"
+        if [ -z "$BASE_SHA" ]; then
+          if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+            echo "::warning::Base branch could not be fetched; cannot detect changed files"
+          else
+            echo "Not running in PR context, no files to check"
+          fi
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        else
           echo "Detecting changed files in PR..."
-          # Ensure base branch is available (shallow clones may not have it;
-          # fetch by branch name not SHA since GitHub doesn't allow fetching by SHA)
-          git fetch --depth=1 origin ${{ github.base_ref }} 2>/dev/null || true
-          git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
-            | grep -E '\.md$' > changed_files.txt || echo "No markdown files changed"
+          # Diff from fetched base to HEAD (the PR merge commit checkout).
+          # Using HEAD avoids relying on github.event.pull_request.head.sha
+          # being present in a shallow clone.
+          git diff --name-only --diff-filter=d "${BASE_SHA}..HEAD" \
+            | grep -E '\.(md|adoc)$' > changed_files.txt || true
 
           if [ -s changed_files.txt ]; then
             echo "Found changed files:"
@@ -243,9 +268,6 @@ runs:
             echo "No markdown files changed in this PR"
             echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
-        else
-          echo "Not running in PR context, no files to check"
-          echo "has_changes=false" >> $GITHUB_OUTPUT
         fi
 
     - name: Determine files to lint
@@ -312,33 +334,30 @@ runs:
 
     - name: Get modified line ranges
       id: modified-lines
-      if: steps.final-files-check.outputs.has_files == 'true' && github.event.pull_request.base.sha != ''
+      if: steps.final-files-check.outputs.has_files == 'true' && steps.fetch-base.outputs.base_sha != ''
       shell: bash
       env:
         TEMP_DIR: ${{ steps.setup-temp.outputs.temp_dir }}
+        BASE_SHA: ${{ steps.fetch-base.outputs.base_sha }}
       run: |
-        echo "Getting modified line ranges for each file..."
-
-        # Ensure base branch is available (shallow clones may not have it;
-        # fetch by branch name not SHA since GitHub doesn't allow fetching by SHA)
-        git fetch --depth=1 origin ${{ github.base_ref }} 2>/dev/null || true
+        echo "Getting modified line ranges for each file (base: ${BASE_SHA})..."
 
         # Create a file to store line ranges: filename|start_line|line_count
         > "$TEMP_DIR/line_ranges.txt"
 
         while IFS= read -r file; do
           if [ -f "$file" ]; then
-            # Get line ranges from git diff
-            # Note: Use { ... || true; } to handle both missing SHAs (exit 128) and
-            # files with no @@ hunks (grep exit 1) without failing the pipeline with pipefail
-            { git diff -U0 --diff-filter=d ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} "$file" 2>/dev/null || true; } \
-              | { grep '^@@' || true; } | while read -r line; do
+            # Diff from fetched base to HEAD. BASE_SHA is guaranteed to exist
+            # (fetched in the previous step). HEAD is always available.
+            # { grep ... || true; } handles files with no @@ hunks (e.g. binary).
+            git diff -U0 --diff-filter=d "${BASE_SHA}..HEAD" "$file" 2>/dev/null \
+              | { grep '^@@' || true; } | while read -r hunk; do
                 # Extract start line and count from @@ -x,y +a,b @@
-                range=$(echo "$line" | sed -n 's/^@@ -[0-9,]* +\([0-9]*\),*\([0-9]*\).*/\1 \2/p')
+                range=$(echo "$hunk" | sed -n 's/^@@ -[0-9,]* +\([0-9]*\),*\([0-9]*\).*/\1 \2/p')
                 start=$(echo "$range" | awk '{print $1}')
                 count=$(echo "$range" | awk '{print $2}')
 
-                # If count is empty, it means only 1 line was changed
+                # If count is empty, exactly 1 line was changed
                 if [ -z "$count" ]; then
                   count=1
                 fi
