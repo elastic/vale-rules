@@ -237,6 +237,8 @@ runs:
         # Only get changed files if running in a PR context
         if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
           echo "Detecting changed files in PR..."
+          # Ensure base commit is available (shallow clones may not have it)
+          git fetch --depth=1 origin ${{ github.event.pull_request.base.sha }} 2>/dev/null || true
           git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
             | grep -E '\.(md|adoc)$' > changed_files.txt || echo "No markdown/adoc files changed"
 
@@ -318,6 +320,9 @@ runs:
         TEMP_DIR: ${{ steps.setup-temp.outputs.temp_dir }}
       run: |
         echo "Getting modified line ranges for each file..."
+
+        # Ensure base commit is available (shallow clones may not have it)
+        git fetch --depth=1 origin ${{ github.event.pull_request.base.sha }} 2>/dev/null || true
 
         # Create a file to store line ranges: filename|start_line|line_count
         > "$TEMP_DIR/line_ranges.txt"
