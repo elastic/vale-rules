@@ -239,14 +239,14 @@ runs:
           gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
             --paginate 2>/dev/null \
             | jq -rs 'add // [] | .[] | select(.status != "removed") | .filename' \
-            | grep -E '\.(md|adoc)$' > changed_files.txt || true
+            | grep -E '\.md$' > changed_files.txt || true
 
           if [ -s changed_files.txt ]; then
             echo "Found changed files:"
             cat changed_files.txt
             echo "has_changes=true" >> $GITHUB_OUTPUT
           else
-            echo "No markdown or adoc files changed in this PR"
+            echo "No markdown files changed in this PR"
             echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
         fi
