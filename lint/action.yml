@@ -225,15 +225,21 @@ runs:
       id: changed-files
       if: inputs.files == ''
       shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
-        # Only get changed files if running in a PR context
-        if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
-          echo "Detecting changed files in PR..."
-          # Ensure base branch is available (shallow clones may not have it;
-          # fetch by branch name not SHA since GitHub doesn't allow fetching by SHA)
-          git fetch --depth=1 origin ${{ github.base_ref }} 2>/dev/null || true
-          git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
-            | grep -E '\.md$' > changed_files.txt || echo "No markdown files changed"
+        if [ -z "${{ github.event.pull_request.number }}" ]; then
+          echo "Not running in PR context, no files to check"
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        else
+          echo "Fetching changed files from GitHub API..."
+          # gh api uses GH_TOKEN automatically (authenticated = no rate limit issues).
+          # --paginate handles PRs with more than 30 changed files.
+          # jq -s 'add // []' merges paginated arrays into one before filtering.
+          gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate 2>/dev/null \
+            | jq -rs 'add // [] | .[] | select(.status != "removed") | .filename' \
+            | grep -E '\.md$' > changed_files.txt || true
 
           if [ -s changed_files.txt ]; then
             echo "Found changed files:"
@@ -243,9 +249,6 @@ runs:
             echo "No markdown files changed in this PR"
             echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
-        else
-          echo "Not running in PR context, no files to check"
-          echo "has_changes=false" >> $GITHUB_OUTPUT
         fi
 
     - name: Determine files to lint
@@ -312,48 +315,52 @@ runs:
 
     - name: Get modified line ranges
       id: modified-lines
-      if: steps.final-files-check.outputs.has_files == 'true' && github.event.pull_request.base.sha != ''
+      if: steps.final-files-check.outputs.has_files == 'true' && github.event.pull_request.number != ''
       shell: bash
       env:
         TEMP_DIR: ${{ steps.setup-temp.outputs.temp_dir }}
+        GH_TOKEN: ${{ github.token }}
       run: |
-        echo "Getting modified line ranges for each file..."
+        echo "Fetching line ranges from GitHub API..."
 
-        # Ensure base branch is available (shallow clones may not have it;
-        # fetch by branch name not SHA since GitHub doesn't allow fetching by SHA)
-        git fetch --depth=1 origin ${{ github.base_ref }} 2>/dev/null || true
+        # Fetch all PR file patches in one authenticated call.
+        # jq -s 'add // []' merges paginated arrays into one.
+        PR_PATCHES=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+          --paginate 2>/dev/null | jq -s 'add // []') || PR_PATCHES=""
 
-        # Create a file to store line ranges: filename|start_line|line_count
-        > "$TEMP_DIR/line_ranges.txt"
+        if [ -z "$PR_PATCHES" ] || [ "$PR_PATCHES" = "null" ] || [ "$PR_PATCHES" = "[]" ]; then
+          echo "::warning::Could not fetch PR patches; line-range filtering will be skipped (Vale will lint entire files)"
+        else
+          > "$TEMP_DIR/line_ranges.txt"
 
-        while IFS= read -r file; do
-          if [ -f "$file" ]; then
-            # Get line ranges from git diff
-            # Note: Use { ... || true; } to handle both missing SHAs (exit 128) and
-            # files with no @@ hunks (grep exit 1) without failing the pipeline with pipefail
-            { git diff -U0 --diff-filter=d ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} "$file" 2>/dev/null || true; } \
-              | { grep '^@@' || true; } | while read -r line; do
+          while IFS= read -r file; do
+            # Extract the patch for this file from the API response.
+            # .patch is null for binary files or diffs that exceed GitHub's size limit.
+            patch=$(echo "$PR_PATCHES" | jq -r --arg f "$file" \
+              '.[] | select(.filename == $f) | .patch // empty')
+
+            if [ -n "$patch" ]; then
+              echo "$patch" | { grep '^@@' || true; } | while read -r hunk; do
                 # Extract start line and count from @@ -x,y +a,b @@
-                range=$(echo "$line" | sed -n 's/^@@ -[0-9,]* +\([0-9]*\),*\([0-9]*\).*/\1 \2/p')
+                range=$(echo "$hunk" | sed -n 's/^@@ -[0-9,]* +\([0-9]*\),*\([0-9]*\).*/\1 \2/p')
                 start=$(echo "$range" | awk '{print $1}')
                 count=$(echo "$range" | awk '{print $2}')
 
-                # If count is empty, it means only 1 line was changed
+                # If count is empty, exactly 1 line was changed
                 if [ -z "$count" ]; then
                   count=1
                 fi
 
                 echo "$file|$start|$count" >> "$TEMP_DIR/line_ranges.txt"
               done
+            fi
+          done < files_to_lint.txt
+
+          if [ -s "$TEMP_DIR/line_ranges.txt" ]; then
+            echo "Modified line ranges:"
+            cat "$TEMP_DIR/line_ranges.txt"
+            cp "$TEMP_DIR/line_ranges.txt" line_ranges.txt
           fi
-        done < files_to_lint.txt
-
-        if [ -s "$TEMP_DIR/line_ranges.txt" ]; then
-          echo "Modified line ranges:"
-          cat "$TEMP_DIR/line_ranges.txt"
-
-          # Copy to workspace for Python script
-          cp "$TEMP_DIR/line_ranges.txt" line_ranges.txt
         fi
 
     - name: Run Vale and generate report
