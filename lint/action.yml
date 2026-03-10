@@ -75,6 +75,7 @@ runs:
       shell: bash
       env:
         VALE_VERSION: ${{ inputs.vale_version }}
+        GH_TOKEN: ${{ github.token }}
       run: |
         if command -v vale &> /dev/null; then
           echo "Vale is already installed: $(vale --version)"
@@ -84,16 +85,36 @@ runs:
         echo "Installing Vale..."
 
         if [ "$VALE_VERSION" == "latest" ]; then
-          # Get the latest release tag from GitHub
-          VALE_VERSION=$(curl -s https://api.github.com/repos/errata-ai/vale/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+          VALE_VERSION=$(gh api repos/errata-ai/vale/releases/latest --jq '.tag_name' 2>/dev/null | sed 's/^v//')
+          if [ -z "$VALE_VERSION" ] || [ "$VALE_VERSION" == "null" ]; then
+            echo "::warning::Could not resolve latest Vale version from GitHub API"
+            VALE_VERSION=""
+          fi
         else
-          # Strip leading 'v' if present
           VALE_VERSION="${VALE_VERSION#v}"
         fi
 
-        echo "Installing Vale v${VALE_VERSION}..."
-        curl -sL "https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz" \
-          | sudo tar xz -C /usr/local/bin vale
+        INSTALLED=false
+
+        if [ -n "$VALE_VERSION" ]; then
+          DOWNLOAD_URL="https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz"
+          echo "Installing Vale v${VALE_VERSION} from GitHub releases..."
+
+          for attempt in 1 2 3; do
+            echo "Download attempt ${attempt}/3..."
+            if curl -sfL "$DOWNLOAD_URL" | sudo tar xz -C /usr/local/bin vale; then
+              INSTALLED=true
+              break
+            fi
+            echo "::warning::Attempt ${attempt} failed"
+            sleep 2
+          done
+        fi
+
+        if [ "$INSTALLED" != "true" ]; then
+          echo "GitHub release download failed; falling back to snap..."
+          sudo snap install vale
+        fi
 
         echo "Installed: $(vale --version)"
 
