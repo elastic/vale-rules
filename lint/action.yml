@@ -124,6 +124,11 @@ runs:
       run: |
         # Create a minimal .vale.ini for this run
         # Vale will download the package and merge its .vale.ini automatically
+
+        # Remove any pre-existing file/symlink to prevent symlink attacks
+        # (e.g., a malicious PR could plant .vale.ini.temp -> .git/HEAD)
+        rm -f .vale.ini.temp
+
         cat > .vale.ini.temp << 'EOF'
         StylesPath = .vale-styles
 
@@ -157,6 +162,9 @@ runs:
         fi
 
         echo "Using local styles from: ${SOURCE_PATH}"
+
+        # Remove any pre-existing file/symlink to prevent symlink attacks
+        rm -f .vale.ini.temp
 
         # Verify local .vale.ini exists
         if [ ! -f "${SOURCE_PATH}/.vale.ini" ]; then
@@ -217,16 +225,19 @@ runs:
           key=$(echo "$line" | sed 's/[[:space:]]*=.*//')
           escaped_key=$(echo "$key" | sed 's/\./\\./g')
 
+          # Escape sed special characters in the replacement string to prevent injection
+          escaped_line=$(printf '%s' "$line" | sed 's/[&/\]/\\&/g')
+
           for cfg in $CONFIG_FILES; do
             if grep -q "^${escaped_key}[[:space:]]*=" "$cfg"; then
-              sed -i "s/^${escaped_key}[[:space:]]*=.*/${line}/" "$cfg"
+              sed -i "s/^${escaped_key}[[:space:]]*=.*/${escaped_line}/" "$cfg"
               echo "  Replaced in $(basename "$cfg"): ${line}"
             fi
           done
 
           # If the key wasn't in any config, insert it into the main config
           if ! grep -rq "^${escaped_key}[[:space:]]*=" $CONFIG_FILES; then
-            sed -i "/^\[\\*\\.md\]/a ${line}" .vale.ini.temp
+            sed -i "/^\[\\*\\.md\]/a ${escaped_line}" .vale.ini.temp
             echo "  Inserted: ${line}"
           fi
         done < "$OVERRIDE_FILE"
@@ -421,7 +432,10 @@ runs:
         # Capture stderr separately to avoid corrupting JSON output
         VALE_STDERR=$(mktemp)
         VALE_EXIT=0
-        timeout 300 vale --config=.vale.ini.temp --output=JSON $(cat files_to_lint.txt | tr '\n' ' ') > vale_output.json 2>"$VALE_STDERR" || VALE_EXIT=$?
+
+        # Read files into an array to handle filenames safely
+        mapfile -t VALE_FILES < files_to_lint.txt
+        timeout 300 vale --config=.vale.ini.temp --output=JSON "${VALE_FILES[@]}" > vale_output.json 2>"$VALE_STDERR" || VALE_EXIT=$?
 
         if [ $VALE_EXIT -eq 124 ]; then
           echo "::error::Vale timed out after 5 minutes"
