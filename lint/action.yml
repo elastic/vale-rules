@@ -94,27 +94,44 @@ runs:
           VALE_VERSION="${VALE_VERSION#v}"
         fi
 
-        INSTALLED=false
-
-        if [ -n "$VALE_VERSION" ]; then
-          DOWNLOAD_URL="https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz"
-          echo "Installing Vale v${VALE_VERSION} from GitHub releases..."
-
-          for attempt in 1 2 3; do
-            echo "Download attempt ${attempt}/3..."
-            if curl -sfL "$DOWNLOAD_URL" | sudo tar xz -C /usr/local/bin vale; then
-              INSTALLED=true
-              break
-            fi
-            echo "::warning::Attempt ${attempt} failed"
-            sleep 2
-          done
+        if [ -z "$VALE_VERSION" ]; then
+          echo "::error::Could not determine Vale version to install"
+          exit 1
         fi
 
-        if [ "$INSTALLED" != "true" ]; then
-          echo "GitHub release download failed; falling back to snap..."
-          sudo snap install vale
+        TARBALL="vale_${VALE_VERSION}_Linux_64-bit.tar.gz"
+        CHECKSUMS="vale_${VALE_VERSION}_checksums.txt"
+        RELEASE_BASE="https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}"
+        TMPDIR=$(mktemp -d)
+
+        echo "Installing Vale v${VALE_VERSION} from GitHub releases..."
+
+        for attempt in 1 2 3; do
+          echo "Download attempt ${attempt}/3..."
+          if curl -sfL -o "$TMPDIR/$TARBALL" "$RELEASE_BASE/$TARBALL" && \
+             curl -sfL -o "$TMPDIR/$CHECKSUMS" "$RELEASE_BASE/$CHECKSUMS"; then
+            break
+          fi
+          echo "::warning::Attempt ${attempt} failed"
+          sleep 2
+        done
+
+        if [ ! -f "$TMPDIR/$TARBALL" ] || [ ! -f "$TMPDIR/$CHECKSUMS" ]; then
+          echo "::error::Failed to download Vale binary or checksums after 3 attempts"
+          rm -rf "$TMPDIR"
+          exit 1
         fi
+
+        echo "Verifying SHA-256 checksum..."
+        (cd "$TMPDIR" && grep "$TARBALL" "$CHECKSUMS" | sha256sum --check --strict)
+        if [ $? -ne 0 ]; then
+          echo "::error::Checksum verification failed for $TARBALL"
+          rm -rf "$TMPDIR"
+          exit 1
+        fi
+
+        sudo tar xz -C /usr/local/bin vale < "$TMPDIR/$TARBALL"
+        rm -rf "$TMPDIR"
 
         echo "Installed: $(vale --version)"
 
@@ -207,6 +224,11 @@ runs:
 
         echo "Applying repo-level Vale overrides from ${OVERRIDE_FILE}"
 
+        # Only allow overriding rule severity and alert level — not structural
+        # config like StylesPath, BasedOnStyles, or Packages, which could be
+        # abused to disable linting or load attacker-controlled styles.
+        ALLOWED_KEY_PATTERN='^(Elastic\.|MinAlertLevel[[:space:]]*=)'
+
         # Collect all config files that need patching:
         # 1. The main temp config
         # 2. Any packaged configs (from vale sync) that override the main config
@@ -223,6 +245,12 @@ runs:
           [[ "$line" =~ ^[[:space:]]*\[ ]] && continue
 
           key=$(echo "$line" | sed 's/[[:space:]]*=.*//')
+
+          if ! echo "$key" | grep -qE "$ALLOWED_KEY_PATTERN"; then
+            echo "  Skipped (not in allowlist): ${key}"
+            continue
+          fi
+
           escaped_key=$(echo "$key" | sed 's/\./\\./g')
 
           # Escape sed special characters in the replacement string to prevent injection
