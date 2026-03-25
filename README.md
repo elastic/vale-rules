@@ -63,10 +63,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      
+          persist-credentials: false
+
       - name: Run Vale Linter
         uses: elastic/vale-rules/lint@main
 ```
@@ -197,6 +198,35 @@ Or add the override manually to your local Vale config:
 [*.md]
 Elastic.Spelling = YES
 ```
+
+## Security considerations for CI workflows
+
+The lint action runs on PR content, which is untrusted input from external contributors. Follow these guidelines to avoid exposing secrets or write-scoped tokens to attacker-controlled code.
+
+### Use `pull_request`, not `pull_request_target`
+
+The lint workflow **must** use the `pull_request` trigger. Never use `pull_request_target` with a checkout of the PR head — this runs attacker-controlled code with the base repo's write permissions and secrets.
+
+### Set `persist-credentials: false` on checkout
+
+By default, `actions/checkout` stores the `GITHUB_TOKEN` in `.git/config`. If an attacker achieves any form of file read on the runner, they can extract it. Disable this:
+
+```yaml
+- uses: actions/checkout@v6
+  with:
+    fetch-depth: 0
+    persist-credentials: false
+```
+
+The lint action does not need git credentials after checkout — it uses `GH_TOKEN` as an environment variable for API calls.
+
+### Set minimal `permissions`
+
+The lint workflow should only need `contents: read`. The report workflow (which runs trusted code from the base branch via `workflow_run`) is the only one that needs `pull-requests: write`.
+
+### Override allowlist
+
+The `.vale-overrides.ini` feature only allows overriding rule-level settings (`Elastic.*` rules and `MinAlertLevel`). Structural config keys like `StylesPath`, `BasedOnStyles`, and `Packages` cannot be overridden. This prevents a malicious PR from disabling linting or loading attacker-controlled styles.
 
 ## Folder structure
 

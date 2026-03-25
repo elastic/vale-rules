@@ -31,6 +31,7 @@ jobs:
         with:
           # Need full history for git diff in line range calculation
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run lint action
         id: lint
@@ -139,6 +140,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Run path_filter tests
         working-directory: lint
@@ -154,6 +157,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run lint on clean file
         id: lint-clean
@@ -195,6 +199,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run lint with include_paths filter
         id: lint-filtered
@@ -240,6 +245,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run lint with negation pattern
         id: lint-negation
@@ -287,6 +293,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run lint without override (spelling should be off by default)
         id: lint-no-override
