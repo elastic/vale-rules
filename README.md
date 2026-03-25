@@ -63,10 +63,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      
+          persist-credentials: false
+
       - name: Run Vale Linter
         uses: elastic/vale-rules/lint@main
 ```
@@ -197,6 +198,16 @@ Or add the override manually to your local Vale config:
 [*.md]
 Elastic.Spelling = YES
 ```
+
+## Security considerations for CI workflows
+
+The lint action processes PR content. Follow these guidelines when setting up your workflows:
+
+- **Use `pull_request`, not `pull_request_target`**, for the lint workflow.
+- **Set `persist-credentials: false`** on the checkout step. The lint action does not need git credentials after checkout.
+- **Set minimal `permissions`**: the lint workflow only needs `contents: read`. Only the report workflow (via `workflow_run`) needs `pull-requests: write`.
+
+The `.vale-overrides.ini` feature only allows overriding rule-level settings (`Elastic.*` rules and `MinAlertLevel`). Structural config keys like `StylesPath`, `BasedOnStyles`, and `Packages` cannot be overridden.
 
 ## Folder structure
 
