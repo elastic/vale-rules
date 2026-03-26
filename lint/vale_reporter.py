@@ -35,6 +35,9 @@ To use Vale locally or report issues, refer to [Elastic style guide for Vale](ht
 
 def load_vale_output(file_path: str) -> Dict:
     """Load and parse Vale JSON output."""
+    if os.path.islink(file_path):
+        print(f"::error::{file_path} is a symlink - refusing to read", file=sys.stderr)
+        sys.exit(1)
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             return json.load(f)

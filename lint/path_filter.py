@@ -83,6 +83,9 @@ def set_output(name: str, value: str) -> None:
     """Set GitHub Actions output variable."""
     github_output = os.environ.get('GITHUB_OUTPUT', '')
     if github_output:
+        if os.path.islink(github_output):
+            print(f"::error::GITHUB_OUTPUT is a symlink - refusing to write", file=sys.stderr)
+            sys.exit(1)
         with open(github_output, 'a') as f:
             f.write(f'{name}={value}\n')
 

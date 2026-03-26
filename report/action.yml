@@ -28,9 +28,11 @@ runs:
         name: vale-results
         github_token: ${{ inputs.github_token }}
         run_id: ${{ github.event.workflow_run.id }}
+        path: .vale-artifacts
 
     - name: Check for unexpected files in artifact
       shell: bash
+      working-directory: .vale-artifacts
       run: |
         for f in vale_results.json vale_report.md issue_counts.txt; do
           [ -f "$f" ] && continue
@@ -52,10 +54,10 @@ runs:
       id: check-results
       shell: bash
       run: |
-        if [ -f vale_results.json ]; then
+        if [ -f .vale-artifacts/vale_results.json ]; then
           echo "format=json" >> $GITHUB_OUTPUT
           echo "has_results=true" >> $GITHUB_OUTPUT
-        elif [ -f vale_report.md ]; then
+        elif [ -f .vale-artifacts/vale_report.md ]; then
           echo "format=legacy" >> $GITHUB_OUTPUT
           echo "has_results=true" >> $GITHUB_OUTPUT
           echo "::warning::Using legacy vale_report.md format. Update your lint action to produce vale_results.json."
@@ -88,8 +90,8 @@ runs:
       shell: bash
       run: |
         python3 ${{ github.action_path }}/render_report.py \
-          --input vale_results.json \
-          --output vale_report.md \
+          --input .vale-artifacts/vale_results.json \
+          --output .vale-artifacts/vale_report.md \
           --repo "${{ github.repository }}" \
           --pr "${{ steps.pr-number.outputs.pr_number }}"
 
@@ -98,7 +100,7 @@ runs:
       uses: marocchino/sticky-pull-request-comment@70d2764d1a7d5d9560b100cbea0077fc8f633987 # v3.0.2
       with:
         header: elastic-vale-results
-        path: vale_report.md
+        path: .vale-artifacts/vale_report.md
         number: ${{ steps.pr-number.outputs.pr_number }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
 
@@ -106,5 +108,5 @@ runs:
       if: always()
       shell: bash
       run: |
-        rm -f vale_report.md vale_results.json issue_counts.txt
+        rm -rf .vale-artifacts
         echo "Cleanup complete"
