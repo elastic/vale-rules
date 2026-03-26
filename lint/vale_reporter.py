@@ -290,6 +290,49 @@ def generate_markdown_report(
     return error_count, warning_count, suggestion_count
 
 
+def generate_json_report(
+    filtered_issues: Dict[str, List[Dict]],
+    output_file: str
+) -> None:
+    """Generate structured JSON report for secure artifact transport.
+
+    This JSON file crosses the artifact trust boundary between the unprivileged
+    lint workflow and the privileged report workflow.  The report side validates
+    the schema and renders markdown from its own template, so no markdown,
+    links, or HTML pass through the artifact.
+    """
+    issues = []
+    for severity, items in filtered_issues.items():
+        for item in items:
+            issues.append({
+                'path': item.get('file', ''),
+                'line': item.get('line', 0),
+                'rule': item.get('rule', 'Unknown'),
+                'severity': severity,
+                'message': item.get('message', ''),
+            })
+
+    error_count = len(filtered_issues.get('error', []))
+    warning_count = len(filtered_issues.get('warning', []))
+    suggestion_count = len(filtered_issues.get('suggestion', []))
+
+    data = {
+        'summary': {
+            'errors': error_count,
+            'warnings': warning_count,
+            'suggestions': suggestion_count,
+        },
+        'issues': issues,
+    }
+
+    try:
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+    except IOError as e:
+        print(f"::error::Failed to write JSON report: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def log_telemetry(
     filtered_issues: Dict[str, List[Dict]],
     github_repo: str,
@@ -395,6 +438,8 @@ def main():
                 f.write(REPORT_FOOTER)
             with open('issue_counts.txt', 'w', encoding='utf-8') as f:
                 f.write("errors=0\nwarnings=0\nsuggestions=0\n")
+            with open('vale_results.json', 'w', encoding='utf-8') as f:
+                json.dump({'summary': {'errors': 0, 'warnings': 0, 'suggestions': 0}, 'issues': []}, f, indent=2)
         except IOError as e:
             print(f"::error::Failed to write output files: {e}", file=sys.stderr)
             sys.exit(1)
@@ -421,7 +466,10 @@ def main():
         pr_number,
         'vale_report.md'
     )
-    
+
+    # Generate structured JSON report for secure artifact transport
+    generate_json_report(filtered_issues, 'vale_results.json')
+
     # Output structured telemetry logs (picked up by GitHub observability)
     log_telemetry(filtered_issues, github_repo, pr_number, commit_sha)
     
