@@ -105,6 +105,24 @@ jobs:
           
           echo "✓ All key rules verified"
 
+      - name: Verify JSON report was generated
+        run: |
+          if [ ! -f vale_results.json ]; then
+            echo "::error::vale_results.json was not generated"
+            exit 1
+          fi
+          python3 -c "
+          import json, sys
+          with open('vale_results.json') as f:
+              data = json.load(f)
+          assert 'summary' in data, 'missing summary'
+          assert 'issues' in data, 'missing issues'
+          assert isinstance(data['issues'], list), 'issues must be a list'
+          for issue in data['issues']:
+              assert set(issue.keys()) == {'path', 'line', 'rule', 'severity', 'message'}, f'bad keys: {issue.keys()}'
+          print(f'OK: {len(data[\"issues\"])} issues in JSON report')
+          "
+
       - name: Verify vocab words don't break rules
         run: |
           # The test file has "Use a HTML Dashboard to view the Analytics data."
@@ -129,6 +147,7 @@ jobs:
           name: test-results-${{ matrix.style_source }}
           path: |
             vale_report.md
+            vale_results.json
             issue_counts.txt
           retention-days: 5
 
@@ -146,6 +165,10 @@ jobs:
       - name: Run path_filter tests
         working-directory: lint
         run: python3 -m unittest test_path_filter -v
+
+      - name: Run render_report tests
+        working-directory: report
+        run: python3 -m unittest test_render_report -v
 
   # Test that clean files produce no issues (no false positives)
   test-clean-file:
@@ -373,5 +396,6 @@ jobs:
           name: vale-results
           path: |
             vale_report.md
+            vale_results.json
             issue_counts.txt
           retention-days: 1

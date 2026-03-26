@@ -505,10 +505,11 @@ runs:
             echo "To use Vale locally or report issues, refer to [Elastic style guide for Vale](https://www.elastic.co/docs/contribute-docs/vale-linter)."
           } > vale_report.md
           
-          # Also create issue_counts.txt for artifact upload
+          # Also create issue_counts.txt and vale_results.json for artifact upload
           echo "errors=0" > issue_counts.txt
           echo "warnings=0" >> issue_counts.txt
           echo "suggestions=0" >> issue_counts.txt
+          echo '{"summary":{"errors":0,"warnings":0,"suggestions":0},"issues":[]}' > vale_results.json
           exit 0
         fi
 
@@ -554,6 +555,7 @@ runs:
         name: ${{ inputs.artifact_name }}
         path: |
           vale_report.md
+          vale_results.json
           issue_counts.txt
         retention-days: 1
 
