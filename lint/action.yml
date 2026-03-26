@@ -1,3 +1,5 @@
+# test
+
 name: 'Elastic Vale Linter - Lint'
 description: 'Run Vale with Elastic style guide on documentation files (Step 1: Linting)'
 author: 'Elastic'
