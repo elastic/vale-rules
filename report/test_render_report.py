@@ -346,6 +346,44 @@ class TestCLI(unittest.TestCase):
         finally:
             os.unlink(inp_path)
 
+    def test_symlink_input_rejected(self):
+        """Refuse to read input if it is a symlink."""
+        # Create a real file, then symlink to it
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as real:
+            json.dump(_valid_data(), real)
+            real_path = real.name
+        link_path = real_path + ".link"
+        os.symlink(real_path, link_path)
+        out_path = real_path + ".md"
+        try:
+            sys.argv = ["render_report.py", "--input", link_path, "--output", out_path]
+            rc = render_report.main()
+            self.assertEqual(rc, 1)
+            self.assertFalse(os.path.exists(out_path))
+        finally:
+            os.unlink(link_path)
+            os.unlink(real_path)
+
+    def test_symlink_output_rejected(self):
+        """Refuse to write output if the path is already a symlink."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as inp:
+            json.dump(_valid_data(), inp)
+            inp_path = inp.name
+        # Create a symlink where the output would go
+        target_path = inp_path + ".target"
+        link_path = inp_path + ".md"
+        with open(target_path, 'w') as f:
+            f.write("")
+        os.symlink(target_path, link_path)
+        try:
+            sys.argv = ["render_report.py", "--input", inp_path, "--output", link_path]
+            rc = render_report.main()
+            self.assertEqual(rc, 1)
+        finally:
+            os.unlink(link_path)
+            os.unlink(target_path)
+            os.unlink(inp_path)
+
     def test_schema_violation_returns_nonzero(self):
         data = _valid_data()
         data["extra_key"] = "bad"

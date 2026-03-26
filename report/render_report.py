@@ -243,6 +243,14 @@ def main() -> int:
     parser.add_argument("--pr", default="", help="PR number")
     args = parser.parse_args()
 
+    # Symlink check — refuse to follow symlinks from untrusted artifacts
+    if os.path.islink(args.input):
+        print("::error::Input file is a symlink - refusing to read", file=sys.stderr)
+        return 1
+    if os.path.islink(args.output):
+        print("::error::Output path is a symlink - refusing to write", file=sys.stderr)
+        return 1
+
     # File size check
     try:
         size = os.path.getsize(args.input)
