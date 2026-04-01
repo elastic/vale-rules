@@ -79,7 +79,7 @@ The lint action supports these inputs:
 | Input | Description | Default |
 |-------|-------------|---------|
 | `files` | Files or directories to lint (space-separated). If not provided, lints changed files in PR. | `''` |
-| `include-paths` | Paths to include for linting (multi-line or space-separated). Supports glob patterns and `!` negation to exclude paths. Only files matching these paths will be linted. | `''` |
+| `vale-paths` | Paths to include for linting (multi-line or space-separated). Supports glob patterns and `!` negation to exclude paths. Only files matching these paths will be linted. | `''` |
 | `fail_on_error` | Fail the action if Vale finds error-level issues. | `'false'` |
 | `vale_version` | Vale version to install. | `'latest'` |
 | `debug` | Enable debug output. | `'false'` |
@@ -105,13 +105,13 @@ The lint action automatically detects this file and merges it into the Vale conf
 
 ### Filtering specific paths
 
-Use `include-paths` to limit linting to specific directories. This is useful when multiple teams share a docs folder:
+Use `vale-paths` to limit linting to specific directories. This is useful when multiple teams share a docs folder:
 
 ```yaml
 - name: Run Vale Linter
   uses: elastic/vale-rules/lint@main
   with:
-    include-paths: |
+    vale-paths: |
       docs/team-a
       docs/team-b
 ```
@@ -122,7 +122,7 @@ With glob patterns:
 - name: Run Vale Linter
   uses: elastic/vale-rules/lint@main
   with:
-    include-paths: |
+    vale-paths: |
       docs/guides/**
       docs/reference/**
 ```
@@ -133,12 +133,14 @@ With negation patterns to exclude specific subdirectories:
 - name: Run Vale Linter
   uses: elastic/vale-rules/lint@main
   with:
-    include-paths: |
+    vale-paths: |
       docs/reference/**
       !docs/reference/query-languages/esql/**
 ```
 
-Space-separated format is also supported: `include-paths: "docs/team-a docs/team-b"`
+Space-separated format is also supported: `vale-paths: "docs/team-a docs/team-b"`
+
+> **Note:** The `include-paths` input still works but is deprecated. Use `vale-paths` instead for consistency with `docs-actions` workflows.
 
 ```yaml
 # .github/workflows/vale-report.yml

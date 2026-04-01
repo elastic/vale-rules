@@ -11,8 +11,12 @@ inputs:
     description: 'Files or directories to lint (space-separated). If not provided, lints changed files in PR.'
     required: false
     default: ''
-  include-paths:
+  vale-paths:
     description: 'Paths to include for linting. Supports glob patterns and ! negation to exclude paths. Can be space-separated or multi-line. Only files matching these paths will be linted.'
+    required: false
+    default: ''
+  include-paths:
+    description: 'Deprecated: use vale-paths instead. Kept for backward compatibility.'
     required: false
     default: ''
   fail_on_error:
@@ -339,12 +343,12 @@ runs:
           echo "has_files=false" >> $GITHUB_OUTPUT
         fi
 
-    - name: Filter files by include-paths
+    - name: Filter files by vale-paths
       id: filter-paths
-      if: steps.files-to-lint.outputs.has_files == 'true' && inputs.include-paths != ''
+      if: steps.files-to-lint.outputs.has_files == 'true' && (inputs.vale-paths != '' || inputs.include-paths != '')
       shell: bash
       env:
-        INCLUDE_PATHS: ${{ inputs.include-paths }}
+        INCLUDE_PATHS: ${{ inputs.vale-paths || inputs.include-paths }}
         DEBUG: ${{ inputs.debug }}
       run: |
         python3 ${{ github.action_path }}/path_filter.py

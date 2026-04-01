@@ -212,9 +212,9 @@ jobs:
 
           echo "✓ Clean file correctly produced no issues"
 
-  # Test include_paths filtering
-  test-include-paths:
-    name: Test include_paths filtering
+  # Test vale-paths filtering
+  test-vale-paths:
+    name: Test vale-paths filtering
     runs-on: ubuntu-latest
 
     steps:
@@ -224,12 +224,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Run lint with include_paths filter
+      - name: Run lint with vale-paths filter
         id: lint-filtered
         uses: ./lint
         with:
           files: .github/test-fixtures/team-a/doc.md .github/test-fixtures/team-b/doc.md
-          include-paths: .github/test-fixtures/team-a
+          vale-paths: .github/test-fixtures/team-a
           fail_on_error: 'false'
           use_local_styles: 'true'
           disable_telemetry: 'true'
@@ -258,9 +258,9 @@ jobs:
             echo "✓ team-b files were correctly filtered out"
           fi
 
-  # Test negation patterns in include-paths
-  test-include-paths-negation:
-    name: Test include_paths negation
+  # Test negation patterns in vale-paths
+  test-vale-paths-negation:
+    name: Test vale-paths negation
     runs-on: ubuntu-latest
 
     steps:
@@ -275,7 +275,7 @@ jobs:
         uses: ./lint
         with:
           files: .github/test-fixtures/team-a/doc.md .github/test-fixtures/team-a/excluded/doc.md
-          include-paths: |
+          vale-paths: |
             .github/test-fixtures/team-a/**
             !.github/test-fixtures/team-a/excluded/**
           fail_on_error: 'false'
@@ -381,7 +381,7 @@ jobs:
   upload-results:
     name: Upload combined results
     runs-on: ubuntu-latest
-    needs: [test-lint, test-clean-file, test-include-paths, test-include-paths-negation, test-repo-override]
+    needs: [test-lint, test-clean-file, test-vale-paths, test-vale-paths-negation, test-repo-override]
     if: always() && needs.test-lint.result == 'success'
 
     steps:
