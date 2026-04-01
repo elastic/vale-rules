@@ -47,6 +47,10 @@ inputs:
     description: 'Name for the uploaded artifact (only used when upload_artifact is true)'
     required: false
     default: 'vale-results'
+outputs:
+  artifact_uploaded:
+    description: 'Whether Vale results were uploaded as an artifact'
+    value: ${{ steps.set-artifact-output.outputs.artifact_uploaded }}
 runs:
   using: 'composite'
   steps:
@@ -558,6 +562,20 @@ runs:
           vale_results.json
           issue_counts.txt
         retention-days: 1
+
+    - name: Set artifact output
+      id: set-artifact-output
+      if: always()
+      shell: bash
+      env:
+        HAS_FILES: ${{ steps.final-files-check.outputs.has_files }}
+        UPLOAD_ARTIFACT: ${{ inputs.upload_artifact }}
+      run: |
+        if [ "$HAS_FILES" == "true" ] && [ "$UPLOAD_ARTIFACT" == "true" ]; then
+          echo "artifact_uploaded=true" >> $GITHUB_OUTPUT
+        else
+          echo "artifact_uploaded=false" >> $GITHUB_OUTPUT
+        fi
 
     - name: Fail on errors
       if: inputs.fail_on_error == 'true' && steps.vale-report.outputs.error_count != '0'
