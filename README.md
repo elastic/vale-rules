@@ -83,6 +83,14 @@ The lint action supports these inputs:
 | `fail_on_error` | Fail the action if Vale finds error-level issues. | `'false'` |
 | `vale_version` | Vale version to install. | `'latest'` |
 | `debug` | Enable debug output. | `'false'` |
+| `upload_artifact` | Upload Vale results as a workflow artifact. | `'true'` |
+| `artifact_name` | Name for the uploaded artifact. | `'vale-results'` |
+
+### Action outputs
+
+| Output | Description |
+|--------|-------------|
+| `artifact_uploaded` | `true` if Vale results were uploaded as an artifact, `false` otherwise. |
 
 ### Per-repo rule overrides
 
