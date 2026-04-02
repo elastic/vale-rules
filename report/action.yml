@@ -70,16 +70,19 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github_token }}
+        PULL_REQUESTS_JSON: ${{ toJSON(github.event.workflow_run.pull_requests) }}
+        HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        GH_REPO: ${{ github.repository }}
       run: |
         # Extract PR number from the workflow_run event
         # First try the pull_requests array
-        PR_NUMBER=$(echo '${{ toJSON(github.event.workflow_run.pull_requests) }}' | jq -r '.[0].number')
+        PR_NUMBER=$(echo "$PULL_REQUESTS_JSON" | jq -r '.[0].number')
 
         # If that's null, search for PR by head SHA (works for forks)
         if [ "$PR_NUMBER" == "null" ] || [ -z "$PR_NUMBER" ]; then
           echo "Pull requests array is empty, searching by head SHA..."
-          PR_NUMBER=$(gh pr list --repo ${{ github.repository }} --state open --json number,headRefOid \
-            --jq '.[] | select(.headRefOid == "${{ github.event.workflow_run.head_sha }}") | .number' | head -1)
+          PR_NUMBER=$(gh pr list --repo "$GH_REPO" --state open --json number,headRefOid \
+            --jq ".[] | select(.headRefOid == \"$HEAD_SHA\") | .number" | head -1)
         fi
 
         echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT

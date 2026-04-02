@@ -259,6 +259,21 @@ runs:
             continue
           fi
 
+          # Extract the value, strip newlines/carriage returns, and validate
+          value=$(echo "$line" | sed 's/^[^=]*=[[:space:]]*//')
+          value=$(printf '%s' "$value" | tr -d '\n\r')
+
+          case "$value" in
+            YES|NO|suggestion|warning|error) ;;
+            *)
+              echo "  Skipped (value not in allowlist): ${key} = ${value}"
+              continue
+              ;;
+          esac
+
+          # Reconstruct the line with the validated value
+          line="${key} = ${value}"
+
           escaped_key=$(echo "$key" | sed 's/\./\\./g')
 
           # Escape sed special characters in the replacement string to prevent injection
@@ -527,7 +542,15 @@ runs:
 
         # Set outputs from the generated counts file
         if [ -f issue_counts.txt ]; then
-          source issue_counts.txt
+          # Parse issue counts safely (no source/eval)
+          errors=$(grep '^errors=' issue_counts.txt | head -1 | cut -d= -f2)
+          warnings=$(grep '^warnings=' issue_counts.txt | head -1 | cut -d= -f2)
+          suggestions=$(grep '^suggestions=' issue_counts.txt | head -1 | cut -d= -f2)
+
+          # Validate they are integers (default to 0 if not)
+          [[ "$errors" =~ ^[0-9]+$ ]] || errors=0
+          [[ "$warnings" =~ ^[0-9]+$ ]] || warnings=0
+          [[ "$suggestions" =~ ^[0-9]+$ ]] || suggestions=0
 
           if [ $errors -gt 0 ] || [ $warnings -gt 0 ] || [ $suggestions -gt 0 ]; then
             echo "has_issues=true" >> $GITHUB_OUTPUT

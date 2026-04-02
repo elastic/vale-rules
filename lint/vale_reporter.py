@@ -13,11 +13,38 @@ It also outputs structured telemetry logs for analytics via GitHub observability
 """
 
 import json
+import re
 import sys
 import os
 import hashlib
 from datetime import datetime, timezone
 from typing import Dict, List, Tuple
+
+
+def sanitize_annotation(value: str) -> str:
+    """Strip GitHub Actions command sequences and newlines from annotation values."""
+    value = str(value)
+    value = value.replace('\r', ' ').replace('\n', ' ')
+    value = value.replace('::', ' ')
+    return value
+
+
+def sanitize_text(text: str) -> str:
+    """Strip HTML tags, markdown links, bare URLs, and injection characters."""
+    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', text)
+    text = re.sub(r'https?://\S+', '', text)
+    text = re.sub(r'[<>\[\]()!]', '', text)
+    text = text.replace('|', '\\|')
+    return text.strip()
+
+
+def sanitize_path(path: str) -> str:
+    """Sanitize a file path value - similar to sanitize_text but preserves path chars."""
+    path = re.sub(r'<[^>]+>', '', path)
+    path = re.sub(r'[<>\[\]()!]', '', path)
+    path = path.replace('|', '\\|')
+    return path.strip()
 
 
 # Telemetry prefix for plain-text logs
@@ -189,8 +216,11 @@ def generate_github_annotations(filtered_issues: Dict[str, List[Dict]]) -> None:
             else:
                 annotation_level = 'notice'
             
-            # Output GitHub Actions annotation
-            print(f"::{annotation_level} file={issue.get('file', '')},line={issue.get('line', 0)}::{issue.get('rule', 'Unknown')}: {issue.get('message', '')}")
+            # Output GitHub Actions annotation (sanitize to prevent workflow command injection)
+            safe_file = sanitize_annotation(issue.get('file', ''))
+            safe_rule = sanitize_annotation(issue.get('rule', 'Unknown'))
+            safe_message = sanitize_annotation(issue.get('message', ''))
+            print(f"::{annotation_level} file={safe_file},line={issue.get('line', 0)}::{safe_rule}: {safe_message}")
 
 
 def generate_diff_hash(file_path: str) -> str:
@@ -258,7 +288,7 @@ def generate_markdown_report(
         report += "|------|------|------|----------|\n"
         for issue in filtered_issues['error']:
             line_link = format_line_link(issue['file'], issue['line'], github_repo, pr_number)
-            report += f"| {issue['file']} | {line_link} | {issue['rule']} | {issue['message']} |\n"
+            report += f"| {sanitize_path(issue['file'])} | {line_link} | {sanitize_text(issue['rule'])} | {sanitize_text(issue['message'])} |\n"
         report += "\n</details>\n\n"
     
     if warning_count > 0:
@@ -267,7 +297,7 @@ def generate_markdown_report(
         report += "|------|------|------|----------|\n"
         for issue in filtered_issues['warning']:
             line_link = format_line_link(issue['file'], issue['line'], github_repo, pr_number)
-            report += f"| {issue['file']} | {line_link} | {issue['rule']} | {issue['message']} |\n"
+            report += f"| {sanitize_path(issue['file'])} | {line_link} | {sanitize_text(issue['rule'])} | {sanitize_text(issue['message'])} |\n"
         report += "\n</details>\n\n"
     
     if suggestion_count > 0:
@@ -276,7 +306,7 @@ def generate_markdown_report(
         report += "|------|------|------|----------|\n"
         for issue in filtered_issues['suggestion']:
             line_link = format_line_link(issue['file'], issue['line'], github_repo, pr_number)
-            report += f"| {issue['file']} | {line_link} | {issue['rule']} | {issue['message']} |\n"
+            report += f"| {sanitize_path(issue['file'])} | {line_link} | {sanitize_text(issue['rule'])} | {sanitize_text(issue['message'])} |\n"
         report += "\n</details>\n\n"
     
     # Add footer
