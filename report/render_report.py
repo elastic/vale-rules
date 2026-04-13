@@ -32,6 +32,7 @@ MAX_RULE_LEN = 128
 MAX_ISSUES = 1000
 ALLOWED_SEVERITIES = frozenset({"error", "warning", "suggestion"})
 RULE_PATTERN = re.compile(r'^[A-Za-z0-9_.]+$')
+SKIP_REASONS = frozenset({"too_many_files"})
 
 REPORT_FOOTER = """
 ---
@@ -72,12 +73,13 @@ def validate(data: object) -> list:
     if not isinstance(data, dict):
         return ["root must be an object"]
 
-    allowed_keys = {"summary", "issues"}
+    allowed_keys = {"summary", "issues", "skipped"}
     extra = set(data.keys()) - allowed_keys
     if extra:
         errors.append(f"unexpected top-level keys: {extra}")
-    if not set(data.keys()) >= allowed_keys:
-        errors.append(f"missing top-level keys: {allowed_keys - set(data.keys())}")
+    required_keys = {"summary", "issues"}
+    if not set(data.keys()) >= required_keys:
+        errors.append(f"missing top-level keys: {required_keys - set(data.keys())}")
     if errors:
         return errors
 
@@ -156,6 +158,25 @@ def validate(data: object) -> list:
         if summary["suggestions"] != counts["suggestion"]:
             errors.append(f"summary.suggestions ({summary['suggestions']}) != actual suggestion count ({counts['suggestion']})")
 
+    skipped = data.get("skipped")
+    if skipped is not None:
+        if not isinstance(skipped, dict):
+            errors.append("skipped must be an object")
+            return errors
+
+        skipped_keys = {"reason", "file_count", "max_files"}
+        if set(skipped.keys()) != skipped_keys:
+            errors.append(f"skipped keys must be exactly {skipped_keys}, got {set(skipped.keys())}")
+            return errors
+
+        if skipped["reason"] not in SKIP_REASONS:
+            errors.append(f"skipped.reason must be one of {SKIP_REASONS}, got {skipped['reason']!r}")
+
+        for key in ("file_count", "max_files"):
+            value = skipped[key]
+            if not isinstance(value, int) or value < 0:
+                errors.append(f"skipped.{key} must be a non-negative integer, got {value!r}")
+
     return errors
 
 
@@ -183,6 +204,16 @@ def format_line_link(path: str, line: int, repo: str, pr: str) -> str:
 
 def render(data: dict, repo: str, pr: str) -> str:
     """Render validated JSON data into the markdown report."""
+    skipped = data.get("skipped")
+    if skipped:
+        file_count = skipped["file_count"]
+        max_files = skipped["max_files"]
+        return (
+            "## ⚪ Vale Linting Results\n\n"
+            f"**Skipped:** Vale did not run because this PR touched {file_count} files, which is more than the configured limit of {max_files}.\n"
+            + REPORT_FOOTER
+        )
+
     # Group issues by severity
     groups: dict = {"error": [], "warning": [], "suggestion": []}
     for issue in data["issues"]:

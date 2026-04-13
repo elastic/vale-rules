@@ -51,6 +51,10 @@ inputs:
     description: 'Name for the uploaded artifact (only used when upload_artifact is true)'
     required: false
     default: 'vale-results'
+  max_files:
+    description: 'Skip Vale when the number of files to lint exceeds this threshold. Set to 0 to disable skipping.'
+    required: false
+    default: '30'
 outputs:
   artifact_uploaded:
     description: 'Whether Vale results were uploaded as an artifact'
@@ -380,9 +384,38 @@ runs:
           echo "has_files=false" >> $GITHUB_OUTPUT
         fi
 
+    - name: Check max file threshold
+      id: file-threshold
+      if: steps.final-files-check.outputs.has_files == 'true'
+      shell: bash
+      env:
+        MAX_FILES: ${{ inputs.max_files }}
+      run: |
+        if ! [[ "$MAX_FILES" =~ ^[0-9]+$ ]]; then
+          echo "::error::max_files must be a non-negative integer, got '$MAX_FILES'"
+          exit 1
+        fi
+
+        sort -u files_to_lint.txt > files_to_lint.sorted
+        mv files_to_lint.sorted files_to_lint.txt
+
+        FILE_COUNT=$(wc -l < files_to_lint.txt | tr -d ' ')
+        echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+
+        if [ "$MAX_FILES" -eq 0 ]; then
+          echo "skip_lint=false" >> $GITHUB_OUTPUT
+          echo "Max file threshold disabled"
+        elif [ "$FILE_COUNT" -gt "$MAX_FILES" ]; then
+          echo "skip_lint=true" >> $GITHUB_OUTPUT
+          echo "::notice::Skipping Vale because $FILE_COUNT files exceed the max_files threshold of $MAX_FILES"
+        else
+          echo "skip_lint=false" >> $GITHUB_OUTPUT
+          echo "Linting $FILE_COUNT file(s), within max_files threshold of $MAX_FILES"
+        fi
+
     - name: Setup temp directory
       id: setup-temp
-      if: steps.final-files-check.outputs.has_files == 'true'
+      if: steps.final-files-check.outputs.has_files == 'true' && steps.file-threshold.outputs.skip_lint != 'true'
       shell: bash
       env:
         DEBUG: ${{ inputs.debug }}
@@ -398,7 +431,7 @@ runs:
 
     - name: Get modified line ranges
       id: modified-lines
-      if: steps.final-files-check.outputs.has_files == 'true' && github.event.pull_request.number != ''
+      if: steps.final-files-check.outputs.has_files == 'true' && steps.file-threshold.outputs.skip_lint != 'true' && github.event.pull_request.number != ''
       shell: bash
       env:
         TEMP_DIR: ${{ steps.setup-temp.outputs.temp_dir }}
@@ -448,7 +481,7 @@ runs:
 
     - name: Run Vale and generate report
       id: vale-report
-      if: steps.final-files-check.outputs.has_files == 'true'
+      if: steps.final-files-check.outputs.has_files == 'true' && steps.file-threshold.outputs.skip_lint != 'true'
       shell: bash
       env:
         GITHUB_REPOSITORY: ${{ github.repository }}
@@ -479,14 +512,17 @@ runs:
           exit 1
         fi
 
-        # Run Vale with JSON output on all files, with a 5-minute timeout to prevent hangs
-        # Capture stderr separately to avoid corrupting JSON output
+        # Run Vale in bounded batches to avoid "argument list too long" errors
+        # when a PR touches many files. Capture stderr separately to avoid
+        # corrupting JSON output.
         VALE_STDERR=$(mktemp)
         VALE_EXIT=0
 
-        # Read files into an array to handle filenames safely
-        mapfile -t VALE_FILES < files_to_lint.txt
-        timeout 300 vale --config=.vale.ini.temp --output=JSON "${VALE_FILES[@]}" > vale_output.json 2>"$VALE_STDERR" || VALE_EXIT=$?
+        python3 ${{ github.action_path }}/run_vale.py \
+          --config .vale.ini.temp \
+          --input files_to_lint.txt \
+          --output vale_output.json \
+          --stderr "$VALE_STDERR" || VALE_EXIT=$?
 
         if [ $VALE_EXIT -eq 124 ]; then
           echo "::error::Vale timed out after 5 minutes"
@@ -571,6 +607,56 @@ runs:
           echo "error_count=0" >> $GITHUB_OUTPUT
         fi
 
+    - name: Write skip report
+      if: steps.final-files-check.outputs.has_files == 'true' && steps.file-threshold.outputs.skip_lint == 'true'
+      shell: bash
+      env:
+        FILE_COUNT: ${{ steps.file-threshold.outputs.file_count }}
+        MAX_FILES: ${{ inputs.max_files }}
+      run: |
+        python3 - <<'PY'
+        import json
+        import os
+
+        file_count = int(os.environ["FILE_COUNT"])
+        max_files = int(os.environ["MAX_FILES"])
+
+        report = {
+          "summary": {
+            "errors": 0,
+            "warnings": 0,
+            "suggestions": 0,
+          },
+          "issues": [],
+          "skipped": {
+            "reason": "too_many_files",
+            "file_count": file_count,
+            "max_files": max_files,
+          },
+        }
+
+        with open("vale_results.json", "w", encoding="utf-8") as f:
+          json.dump(report, f)
+        PY
+
+        cat > vale_report.md <<EOF
+        ## ⚪ Vale Linting Results
+
+        **Skipped:** Vale did not run because this PR touched ${FILE_COUNT} files, which is more than the configured limit of ${MAX_FILES}.
+
+        ---
+
+        The Vale linter checks documentation changes against the [Elastic Docs style guide](https://www.elastic.co/docs/contribute-docs/style-guide).
+
+        To use Vale locally or report issues, refer to [Elastic style guide for Vale](https://www.elastic.co/docs/contribute-docs/vale-linter).
+        EOF
+
+        cat > issue_counts.txt <<EOF
+        errors=0
+        warnings=0
+        suggestions=0
+        EOF
+
     - name: Write Job Summary
       if: always() && steps.final-files-check.outputs.has_files == 'true'
       shell: bash
@@ -605,7 +691,7 @@ runs:
         fi
 
     - name: Fail on errors
-      if: inputs.fail_on_error == 'true' && steps.vale-report.outputs.error_count != '0'
+      if: inputs.fail_on_error == 'true' && steps.file-threshold.outputs.skip_lint != 'true' && steps.vale-report.outputs.error_count != '0'
       shell: bash
       run: |
         echo "❌ Vale found ${{ steps.vale-report.outputs.error_count }} error-level issue(s)"

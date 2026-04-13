@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import render_report  # noqa: E402
 
 
-def _valid_data(issues=None):
+def _valid_data(issues=None, skipped=None):
     """Return a minimal valid vale_results.json structure."""
     if issues is None:
         issues = [
@@ -40,6 +40,7 @@ def _valid_data(issues=None):
             "suggestions": counts["suggestion"],
         },
         "issues": issues,
+        **({"skipped": skipped} if skipped is not None else {}),
     }
 
 
@@ -68,6 +69,13 @@ class TestValidation(unittest.TestCase):
         data["extra"] = "bad"
         errors = render_report.validate(data)
         self.assertTrue(any("unexpected top-level keys" in e for e in errors))
+
+    def test_valid_skipped_payload_passes(self):
+        data = _valid_data(
+            issues=[],
+            skipped={"reason": "too_many_files", "file_count": 31, "max_files": 30},
+        )
+        self.assertEqual(render_report.validate(data), [])
 
     def test_summary_wrong_type(self):
         data = _valid_data()
@@ -170,6 +178,14 @@ class TestValidation(unittest.TestCase):
         errors = render_report.validate(data)
         self.assertTrue(any("summary.errors" in e for e in errors))
 
+    def test_invalid_skipped_reason(self):
+        data = _valid_data(
+            issues=[],
+            skipped={"reason": "something_else", "file_count": 31, "max_files": 30},
+        )
+        errors = render_report.validate(data)
+        self.assertTrue(any("skipped.reason" in e for e in errors))
+
 
 # ---------------------------------------------------------------------------
 # Sanitisation tests
@@ -226,6 +242,16 @@ class TestRendering(unittest.TestCase):
         report = render_report.render(data, "owner/repo", "1")
         self.assertIn("No issues found", report)
         self.assertIn("Vale Linting Results", report)
+
+    def test_skipped_report_renders(self):
+        data = _valid_data(
+            issues=[],
+            skipped={"reason": "too_many_files", "file_count": 31, "max_files": 30},
+        )
+        report = render_report.render(data, "owner/repo", "1")
+        self.assertIn("Skipped", report)
+        self.assertIn("31 files", report)
+        self.assertIn("configured limit of 30", report)
 
     def test_single_error_renders(self):
         data = _valid_data()

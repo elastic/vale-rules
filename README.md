@@ -85,6 +85,7 @@ The lint action supports these inputs:
 | `debug` | Enable debug output. | `'false'` |
 | `upload_artifact` | Upload Vale results as a workflow artifact. | `'true'` |
 | `artifact_name` | Name for the uploaded artifact. | `'vale-results'` |
+| `max_files` | Skip Vale when the number of files to lint exceeds this threshold. Set to `0` to disable skipping. | `'30'` |
 
 ### Action outputs
 
@@ -170,6 +171,8 @@ jobs:
 ```
 
 This two-workflow approach ensures fork PRs are linted safely while still posting results as PR comments.
+
+If a PR exceeds the `max_files` threshold, the lint action skips Vale and posts a report that explains why linting did not run.
 
 Refer to [ACTION_USAGE.md](ACTION_USAGE.md) for detailed documentation and examples.
 
