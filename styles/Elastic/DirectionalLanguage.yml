@@ -1,0 +1,37 @@
+extends: substitution
+message: "Don't use directional language. Use '%s' instead of '%s'."
+link: https://www.elastic.co/docs/contribute-docs/style-guide/accessibility
+ignorecase: true
+level: warning
+action:
+  name: replace
+swap:
+  # "below" — document forward references
+  '(?:as )?shown below':  'in the following example'
+  'outlined below':       'in the following section'
+  'listed below':         'in the following section'
+  'described below':      'in the following section'
+  'the below example':    'the following example'
+  'in the below example': 'in the following example'
+  'the below steps':      'the following steps'
+  'the below options':    'the following options'
+  'the below (?:table|section|figure|diagram|image|screenshot|chart|list|code|configuration|query|command)s?': 'the following [element]'
+
+  # "above" — document back-references
+  '(?:as )?shown above':  'in the preceding example'
+  'outlined above':       'in the preceding section'
+  'listed above':         'in the preceding section'
+  'described above':      'earlier on this page'
+  'mentioned above':      'earlier on this page'
+  'as mentioned above':   'as described earlier'
+  'noted above':          'earlier on this page'
+  'the above (?:table|section|figure|diagram|image|screenshot|chart|list|code|configuration|query|command)s?': 'the preceding [element]'
+
+  # UI position — left/right
+  'to the (?:left|right) of':        'the label of the element'
+  'on the (?:left|right)(?: side)?': 'the label of the element'
+  'in the (?:left|right)(?: side)?': 'the label of the element'
+  '(?:left|right) side of the page': 'the label of the element'
+  'left-hand side':                  'the label of the element'
+  'right-hand side':                 'the label of the element'
+  'scroll (?:left|right)':           'the label of the element or action'
