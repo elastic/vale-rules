@@ -1,8 +1,10 @@
-extends: existence
-message: "Use '→' to separate menu items, not '>' or '=>'. Example: Select Manage index → Add lifecycle policy."
+extends: substitution
+message: "Use '%s' to separate menu items, not '%s'. Example: Select Manage index → Add lifecycle policy."
 link: "https://www.elastic.co/docs/contribute-docs/style-guide/ui-writing"
 nonword: true
-level: warning
-tokens:
-  - "=>"
-  - '[A-Za-z]{3,}\s>\s[A-Za-z]{3,}'
+level: suggestion
+action:
+  name: replace
+swap:
+  '=>': '→'
+  '([A-Za-z]{3,})\s>\s([A-Za-z]{3,})': '$1 → $2'
