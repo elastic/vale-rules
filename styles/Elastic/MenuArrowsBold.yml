@@ -3,6 +3,7 @@ message: "Use '→' to separate menu items, not '>' or '=>'. Example: Select Man
 link: "https://www.elastic.co/docs/contribute-docs/style-guide/ui-writing"
 nonword: true
 level: warning
+scope: raw
 action:
   name: edit
   params:
@@ -10,5 +11,5 @@ action:
     - '\s*(?:=>|>)\s*'
     - ' → '
 tokens:
-  - "=>"
-  - '[A-Za-z]{3,}\s>\s[A-Za-z]{3,}'
+  - '^[ \t]{0,3}[^ \t`\n][^`\n]*\*\*[^*`\n]{2,}\s(?:>|=>)\s[^*`\n]{2,}\*\*[^`\n]*$'
+  - '^[ \t]{0,3}[^ \t`\n][^`\n]*\*\*[A-Za-z]{2,}(?:\s[A-Za-z]{2,})*\*\*\s(?:>|=>)\s\*\*[A-Za-z]{2,}(?:\s[A-Za-z]{2,})*\*\*[^`\n]*$'
