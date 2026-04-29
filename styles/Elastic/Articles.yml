@@ -1,5 +1,6 @@
 extends: substitution
 message: "Use '%s' instead of '%s'. The article depends on pronunciation, not spelling."
+link: https://www.elastic.co/docs/contribute-docs/style-guide/grammar-spelling#using-the-right-article
 level: warning
 ignorecase: true
 action:

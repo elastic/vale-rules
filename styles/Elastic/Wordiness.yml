@@ -1,6 +1,6 @@
 extends: substitution
 message: "Consider using '%s' instead of '%s'."
-link: https://stunning-adventure-qrvr1k2.pages.github.io/tech-writing-guidelines/voice-tone
+link: https://www.elastic.co/docs/contribute-docs/style-guide/voice-tone#write-like-a-minimalist
 ignorecase: true
 level: suggestion
 scope:
@@ -8,7 +8,7 @@ scope:
 action:
   name: replace
 swap:
-  (?:extract|take away|eliminate): remove
+  (?:take away|eliminate): remove
   (?:in order to|as a means to): to
   (?:inform|let know): tell
   (?:previous|prior) to: before
@@ -80,7 +80,7 @@ swap:
   in a careful manner: carefully
   in a thoughtful manner: thoughtfully
   in a timely manner: timely
-  in addition: also
+  in addition(?!\s+to\b): also
   in an effort to: to
   in between: between
   in lieu of: instead of

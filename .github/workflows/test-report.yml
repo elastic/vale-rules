@@ -1,0 +1,60 @@
+name: Test Report Action
+
+on:
+  workflow_run:
+    workflows: ["Test Lint Action"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
+
+jobs:
+  test-report:
+    name: Test report action
+    runs-on: ubuntu-latest
+    # Only run if the triggering workflow was for a PR and completed successfully
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run report action
+        uses: ./report
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify comment was posted
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get PR number from workflow_run
+          PR_NUMBER=$(echo '${{ toJSON(github.event.workflow_run.pull_requests) }}' | jq -r '.[0].number')
+
+          if [ "$PR_NUMBER" == "null" ] || [ -z "$PR_NUMBER" ]; then
+            echo "Could not determine PR number, searching by head SHA..."
+            PR_NUMBER=$(gh pr list --repo ${{ github.repository }} --state open --json number,headRefOid \
+              --jq '.[] | select(.headRefOid == "${{ github.event.workflow_run.head_sha }}") | .number' | head -1)
+          fi
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "::warning::Could not find PR number to verify comment"
+            exit 0
+          fi
+
+          echo "Checking for Vale comment on PR #${PR_NUMBER}..."
+
+          # Look for our sticky comment marker
+          COMMENT_EXISTS=$(gh api repos/${{ github.repository }}/issues/${PR_NUMBER}/comments \
+            --jq '.[] | select(.body | contains("Vale Linting Results")) | .id' | head -1)
+
+          if [ -n "$COMMENT_EXISTS" ]; then
+            echo "✓ Vale linting results comment found (comment ID: $COMMENT_EXISTS)"
+          else
+            echo "::error::Vale linting results comment not found on PR #${PR_NUMBER}"
+            exit 1
+          fi

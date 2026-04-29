@@ -1,0 +1,115 @@
+name: 'Elastic Vale Linter - Report'
+description: 'Post Vale results as PR comment (Step 2: Reporting)'
+author: 'Elastic'
+
+branding:
+  icon: 'message-circle'
+  color: 'blue'
+
+inputs:
+  github_token:
+    default: ${{ github.token }}
+    type: string
+    description: 'GitHub token for posting PR comments'
+    required: false
+  download_artifacts:
+    description: 'Whether to download Vale results from artifacts from the linting workflow'
+    type: boolean
+    default: true
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download Vale results
+      if: inputs.download_artifacts == 'true'
+      uses: dawidd6/action-download-artifact@8305c0f1062bb0d184d09ef4493ecb9288447732 # v20
+      with:
+        name: vale-results
+        github_token: ${{ inputs.github_token }}
+        run_id: ${{ github.event.workflow_run.id }}
+        path: .vale-artifacts
+
+    - name: Check for unexpected files in artifact
+      shell: bash
+      working-directory: .vale-artifacts
+      run: |
+        for f in vale_results.json vale_report.md issue_counts.txt; do
+          [ -f "$f" ] && continue
+        done
+        # Reject any files that are not in the expected set
+        unexpected=""
+        for f in *; do
+          case "$f" in
+            vale_results.json|vale_report.md|issue_counts.txt) ;;
+            *) unexpected="$unexpected $f" ;;
+          esac
+        done
+        if [ -n "$unexpected" ]; then
+          echo "::error::Unexpected files in artifact directory:$unexpected"
+          exit 1
+        fi
+
+    - name: Detect result format
+      id: check-results
+      shell: bash
+      run: |
+        if [ -f .vale-artifacts/vale_results.json ]; then
+          echo "format=json" >> $GITHUB_OUTPUT
+          echo "has_results=true" >> $GITHUB_OUTPUT
+        elif [ -f .vale-artifacts/vale_report.md ]; then
+          echo "format=legacy" >> $GITHUB_OUTPUT
+          echo "has_results=true" >> $GITHUB_OUTPUT
+          echo "::warning::Using legacy vale_report.md format. Update your lint action to produce vale_results.json."
+        else
+          echo "has_results=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Get PR number
+      id: pr-number
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+        PULL_REQUESTS_JSON: ${{ toJSON(github.event.workflow_run.pull_requests) }}
+        HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        GH_REPO: ${{ github.repository }}
+      run: |
+        # Extract PR number from the workflow_run event
+        # First try the pull_requests array
+        PR_NUMBER=$(echo "$PULL_REQUESTS_JSON" | jq -r '.[0].number')
+
+        # If that's null, search for PR by head SHA (works for forks)
+        if [ "$PR_NUMBER" == "null" ] || [ -z "$PR_NUMBER" ]; then
+          echo "Pull requests array is empty, searching by head SHA..."
+          PR_NUMBER=$(gh pr list --repo "$GH_REPO" --state open --json number,headRefOid \
+            --jq ".[] | select(.headRefOid == \"$HEAD_SHA\") | .number" | head -1)
+        fi
+
+        echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+        echo "PR number: $PR_NUMBER"
+
+    - name: Validate and render report
+      if: steps.check-results.outputs.format == 'json'
+      shell: bash
+      run: |
+        python3 ${{ github.action_path }}/render_report.py \
+          --input .vale-artifacts/vale_results.json \
+          --output .vale-artifacts/vale_report.md \
+          --repo "${{ github.repository }}" \
+          --pr "${{ steps.pr-number.outputs.pr_number }}"
+
+    - name: Post sticky comment
+      if: steps.check-results.outputs.has_results == 'true' && steps.pr-number.outputs.pr_number != 'null'
+      uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0 # v3.0.4
+      with:
+        header: elastic-vale-results
+        path: .vale-artifacts/vale_report.md
+        number: ${{ steps.pr-number.outputs.pr_number }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+
+    - name: Cleanup artifacts
+      if: always()
+      shell: bash
+      run: |
+        rm -rf .vale-artifacts
+        echo "Cleanup complete"

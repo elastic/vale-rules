@@ -5,6 +5,14 @@ on:
     tags:
       - 'v*'  # Triggers on version tags like v1.0.0, v2.1.3, etc.
   workflow_dispatch:  # Allows manual triggering from GitHub Actions UI
+    inputs:
+      version:
+        description: 'Version number (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
 
 jobs:
   release:
@@ -12,12 +20,41 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+        
+      - name: Create tag if manual dispatch
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          # Validate version format (must start with 'v' followed by semantic version)
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)?$ ]]; then
+            echo "Error: Version must follow semantic versioning format (e.g., v1.0.0, v1.0.0-beta.1)"
+            exit 1
+          fi
+
+          # Check if tag already exists (both locally and remotely)
+          if git rev-parse "$VERSION" >/dev/null 2>&1 || git ls-remote --tags origin | grep -q "refs/tags/$VERSION$"; then
+            echo "Error: Tag $VERSION already exists"
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
         
       - name: Extract version from tag
         id: get_version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "VERSION=$INPUT_VERSION" >> $GITHUB_OUTPUT
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
             echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           else
             echo "VERSION=manual-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
@@ -25,62 +62,30 @@ jobs:
       
       - name: Create Vale package
         run: |
-          # Create a Style-only package (just the Elastic style folder)
-          # Vale expects the style folder at the root of the zip
+          # Create a complete package with .vale.ini and styles folder
+          # This ensures everyone gets the same configuration
           
           # Add VERSION file to the Elastic style
           echo "${{ steps.get_version.outputs.VERSION }}" > styles/Elastic/VERSION
           
-          # Create the zip file with the Elastic style at root
-          # The zip filename must match the style directory name
-          cd styles
-          zip -r ../Elastic.zip Elastic/
-          cd ..
+          # Create package directory structure
+          mkdir -p elastic-vale
+          cp .vale.ini elastic-vale/
+          cp -r styles elastic-vale/
+          
+          # Create the zip file (name must match root directory for Vale to find it)
+          zip -r elastic-vale.zip elastic-vale/
           
           # Verify the package contents
           echo "Package contents:"
-          unzip -l Elastic.zip
+          unzip -l elastic-vale.zip
           
       - name: Create release and upload asset
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ steps.get_version.outputs.VERSION }}
           name: Release ${{ steps.get_version.outputs.VERSION }}
-          body: |
-            Vale style guide package for Elastic documentation.
-            
-            This is a style-only package containing the `Elastic` style with all style rules.
-            
-            ## Installation
-            
-            Add the following to your project's or system's `.vale.ini` file:
-            
-            ```ini
-            StylesPath = styles
-            MinAlertLevel = suggestion
-            
-            Packages = https://github.com/elastic/vale-rules/releases/latest/download/Elastic.zip
-            
-            [*.md]
-            BasedOnStyles = Elastic
-            
-            [*.adoc]
-            BasedOnStyles = Elastic
-            ```
-            
-            Then run:
-            
-            ```bash
-            vale sync
-            ```
-            
-            The `Elastic` style will be automatically downloaded to your `StylesPath`.
-            
-            ## Alternative: Manual installation
-            
-            1. Download and extract `Elastic.zip`
-            2. Place the `Elastic/` folder in your Vale `StylesPath`
-            3. Add `BasedOnStyles = Elastic` to your `.vale.ini` file
+          generate_release_notes: true
           draft: false
           prerelease: false
-          files: Elastic.zip
+          files: elastic-vale.zip

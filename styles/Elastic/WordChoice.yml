@@ -1,6 +1,6 @@
 extends: substitution
 message: "Consider using '%s' instead of '%s', unless the term is in the UI."
-link: https://stunning-adventure-qrvr1k2.pages.github.io/style-guide/word-choice/
+link: https://www.elastic.co/docs/contribute-docs/style-guide/word-choice
 ignorecase: true
 level: suggestion
 action:
@@ -11,8 +11,6 @@ swap:
   abuse: "misuse"
   blacklist: "blocklist"
   boot: "start, run"
-  clone: "copy"
-  delete: "remove"
   disable: "deactivate, deselect, hide, turn off"
   disabled: "deactivated, deselected, hidden, turned off, unavailable"
   disables: "deactivates, deselects, hides, turns off, makes unavailable"
@@ -31,8 +29,8 @@ swap:
   may: "can, might"
   mute: "turn off, silence"
   sanity check: "review"
-  see: "refer to (if it's a document), view (if it's a UI element)"
-  simple: "efficient"
+  '\bsee(?=\s+(?:the|our|this)\b|\s+\[)': "refer to (if it's a document), view (if it's a UI element)"
+  simple: "efficient, basic"
   simply: "efficiently"
   skin-toned: "dark brown, cream, beige"
   terminate: "stop, exit"

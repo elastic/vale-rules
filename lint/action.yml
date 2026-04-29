@@ -1,0 +1,641 @@
+name: 'Elastic Vale Linter - Lint'
+description: 'Run Vale with Elastic style guide on documentation files (Step 1: Linting)'
+author: 'Elastic'
+
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+inputs:
+  files:
+    description: 'Files or directories to lint (space-separated). If not provided, lints changed files in PR.'
+    required: false
+    default: ''
+  vale-paths:
+    description: 'Paths to include for linting. Supports glob patterns and ! negation to exclude paths. Can be space-separated or multi-line. Only files matching these paths will be linted.'
+    required: false
+    default: ''
+  include-paths:
+    description: 'Deprecated: use vale-paths instead. Kept for backward compatibility.'
+    required: false
+    default: ''
+  fail_on_error:
+    description: 'Fail the action if Vale finds error-level issues'
+    required: false
+    default: 'false'
+  vale_version:
+    description: 'Vale version to install (default: latest via package manager)'
+    required: false
+    default: 'latest'
+  debug:
+    description: 'Enable debug output'
+    required: false
+    default: 'false'
+  use_local_styles:
+    description: 'Use local styles directory instead of downloading from releases (for testing local changes)'
+    required: false
+    default: 'false'
+  styles_path:
+    description: 'Path to local styles directory (only used when use_local_styles is true). Defaults to action repository root.'
+    required: false
+    default: ''
+  disable_telemetry:
+    description: 'Disable telemetry logging (for testing)'
+    required: false
+    default: 'false'
+  upload_artifact:
+    description: 'Upload Vale results as artifact (default: true)'
+    required: false
+    default: 'true'
+  artifact_name:
+    description: 'Name for the uploaded artifact (only used when upload_artifact is true)'
+    required: false
+    default: 'vale-results'
+outputs:
+  artifact_uploaded:
+    description: 'Whether Vale results were uploaded as an artifact'
+    value: ${{ steps.set-artifact-output.outputs.artifact_uploaded }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate dependencies
+      shell: bash
+      run: |
+        # Check required tools
+        if ! command -v jq &> /dev/null; then
+          echo "::error::jq is not installed. Please install jq on your runner."
+          exit 1
+        fi
+
+        if ! command -v python3 &> /dev/null; then
+          echo "::error::python3 is not installed. Please install Python 3 on your runner."
+          exit 1
+        fi
+
+        if ! command -v git &> /dev/null; then
+          echo "::error::git is not installed. Please install git on your runner."
+          exit 1
+        fi
+
+        echo "✓ All dependencies are available"
+
+    - name: Install Vale
+      shell: bash
+      env:
+        VALE_VERSION: ${{ inputs.vale_version }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        if command -v vale &> /dev/null; then
+          echo "Vale is already installed: $(vale --version)"
+          exit 0
+        fi
+
+        echo "Installing Vale..."
+
+        if [ "$VALE_VERSION" == "latest" ]; then
+          VALE_VERSION=$(gh api repos/errata-ai/vale/releases/latest --jq '.tag_name' 2>/dev/null | sed 's/^v//')
+          if [ -z "$VALE_VERSION" ] || [ "$VALE_VERSION" == "null" ]; then
+            echo "::warning::Could not resolve latest Vale version from GitHub API"
+            VALE_VERSION=""
+          fi
+        else
+          VALE_VERSION="${VALE_VERSION#v}"
+        fi
+
+        if [ -z "$VALE_VERSION" ]; then
+          echo "::error::Could not determine Vale version to install"
+          exit 1
+        fi
+
+        TARBALL="vale_${VALE_VERSION}_Linux_64-bit.tar.gz"
+        CHECKSUMS="vale_${VALE_VERSION}_checksums.txt"
+        RELEASE_BASE="https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}"
+        TMPDIR=$(mktemp -d)
+
+        echo "Installing Vale v${VALE_VERSION} from GitHub releases..."
+
+        for attempt in 1 2 3; do
+          echo "Download attempt ${attempt}/3..."
+          if curl -sfL -o "$TMPDIR/$TARBALL" "$RELEASE_BASE/$TARBALL" && \
+             curl -sfL -o "$TMPDIR/$CHECKSUMS" "$RELEASE_BASE/$CHECKSUMS"; then
+            break
+          fi
+          echo "::warning::Attempt ${attempt} failed"
+          sleep 2
+        done
+
+        if [ ! -f "$TMPDIR/$TARBALL" ] || [ ! -f "$TMPDIR/$CHECKSUMS" ]; then
+          echo "::error::Failed to download Vale binary or checksums after 3 attempts"
+          rm -rf "$TMPDIR"
+          exit 1
+        fi
+
+        echo "Verifying SHA-256 checksum..."
+        (cd "$TMPDIR" && grep "$TARBALL" "$CHECKSUMS" | sha256sum --check --strict)
+        if [ $? -ne 0 ]; then
+          echo "::error::Checksum verification failed for $TARBALL"
+          rm -rf "$TMPDIR"
+          exit 1
+        fi
+
+        sudo tar xz -C /usr/local/bin vale < "$TMPDIR/$TARBALL"
+        rm -rf "$TMPDIR"
+
+        echo "Installed: $(vale --version)"
+
+    - name: Configure Vale with released styles
+      if: inputs.use_local_styles != 'true'
+      shell: bash
+      run: |
+        # Create a minimal .vale.ini for this run
+        # Vale will download the package and merge its .vale.ini automatically
+
+        # Remove any pre-existing file/symlink to prevent symlink attacks
+        # (e.g., a malicious PR could plant .vale.ini.temp -> .git/HEAD)
+        rm -f .vale.ini.temp
+
+        cat > .vale.ini.temp << 'EOF'
+        StylesPath = .vale-styles
+
+        Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
+        EOF
+
+        # Sync the Elastic style package (downloads styles and merges packaged config)
+        echo "Downloading Elastic style guide..."
+        if ! vale --config=.vale.ini.temp sync 2>&1; then
+          echo "::error::Vale sync failed. Check if the package URL is accessible: https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip"
+          exit 1
+        fi
+
+        echo "Vale configured with Elastic style guide (released)"
+
+    - name: Configure Vale with local styles
+      if: inputs.use_local_styles == 'true'
+      shell: bash
+      env:
+        STYLES_PATH: ${{ inputs.styles_path }}
+      run: |
+        # Use local .vale.ini and styles directory for testing
+        # This allows testing Vale rule changes before they're released
+
+        # Determine the styles source path
+        if [ -n "${STYLES_PATH}" ]; then
+          SOURCE_PATH="${STYLES_PATH}"
+        else
+          # Default to the action's repository root (where this action is checked out)
+          SOURCE_PATH="${{ github.action_path }}/.."
+        fi
+
+        echo "Using local styles from: ${SOURCE_PATH}"
+
+        # Remove any pre-existing file/symlink to prevent symlink attacks
+        rm -f .vale.ini.temp
+
+        # Verify local .vale.ini exists
+        if [ ! -f "${SOURCE_PATH}/.vale.ini" ]; then
+          echo "::error::Local .vale.ini not found at ${SOURCE_PATH}/.vale.ini"
+          exit 1
+        fi
+
+        # Verify local styles directory exists
+        if [ ! -d "${SOURCE_PATH}/styles" ]; then
+          echo "::error::Local styles directory not found at ${SOURCE_PATH}/styles"
+          exit 1
+        fi
+
+        # Copy local config and styles to workspace
+        # Modify StylesPath to point to .vale-styles (consistent with released styles path)
+        sed 's|^StylesPath = styles|StylesPath = .vale-styles|' "${SOURCE_PATH}/.vale.ini" > .vale.ini.temp
+        mkdir -p .vale-styles
+        cp -r "${SOURCE_PATH}/styles/"* .vale-styles/
+
+        echo "Vale configured with local styles"
+        echo "Styles copied from: ${SOURCE_PATH}/styles"
+        ls -la .vale-styles/
+
+    - name: Apply repo-level Vale overrides
+      shell: bash
+      env:
+        DEBUG: ${{ inputs.debug }}
+      run: |
+        OVERRIDE_FILE=""
+        if [ -f ".vale-overrides.ini" ]; then
+          OVERRIDE_FILE=".vale-overrides.ini"
+        elif [ -f ".github/.vale-overrides.ini" ]; then
+          OVERRIDE_FILE=".github/.vale-overrides.ini"
+        fi
+
+        if [ -z "$OVERRIDE_FILE" ]; then
+          echo "No repo-level Vale overrides found (.vale-overrides.ini or .github/.vale-overrides.ini)"
+          exit 0
+        fi
+
+        echo "Applying repo-level Vale overrides from ${OVERRIDE_FILE}"
+
+        # Only allow overriding rule severity and alert level — not structural
+        # config like StylesPath, BasedOnStyles, or Packages, which could be
+        # abused to disable linting or load attacker-controlled styles.
+        ALLOWED_KEY_PATTERN='^(Elastic\.|MinAlertLevel[[:space:]]*=)'
+
+        # Collect all config files that need patching:
+        # 1. The main temp config
+        # 2. Any packaged configs (from vale sync) that override the main config
+        CONFIG_FILES=".vale.ini.temp"
+        shopt -s nullglob
+        for pkg_config in .vale-styles/.vale-config/*.ini; do
+          CONFIG_FILES="$CONFIG_FILES $pkg_config"
+        done
+        shopt -u nullglob
+
+        while IFS= read -r line; do
+          [[ -z "$line" ]] && continue
+          [[ "$line" =~ ^[[:space:]]*# ]] && continue
+          [[ "$line" =~ ^[[:space:]]*\[ ]] && continue
+
+          key=$(echo "$line" | sed 's/[[:space:]]*=.*//')
+
+          if ! echo "$key" | grep -qE "$ALLOWED_KEY_PATTERN"; then
+            echo "  Skipped (not in allowlist): ${key}"
+            continue
+          fi
+
+          # Extract the value, strip newlines/carriage returns, and validate
+          value=$(echo "$line" | sed 's/^[^=]*=[[:space:]]*//')
+          value=$(printf '%s' "$value" | tr -d '\n\r')
+
+          case "$value" in
+            YES|NO|suggestion|warning|error) ;;
+            *)
+              echo "  Skipped (value not in allowlist): ${key} = ${value}"
+              continue
+              ;;
+          esac
+
+          # Reconstruct the line with the validated value
+          line="${key} = ${value}"
+
+          escaped_key=$(echo "$key" | sed 's/\./\\./g')
+
+          # Escape sed special characters in the replacement string to prevent injection
+          escaped_line=$(printf '%s' "$line" | sed 's/[&/\]/\\&/g')
+
+          for cfg in $CONFIG_FILES; do
+            if grep -q "^${escaped_key}[[:space:]]*=" "$cfg"; then
+              sed -i "s/^${escaped_key}[[:space:]]*=.*/${escaped_line}/" "$cfg"
+              echo "  Replaced in $(basename "$cfg"): ${line}"
+            fi
+          done
+
+          # If the key wasn't in any config, insert it into the main config
+          if ! grep -rq "^${escaped_key}[[:space:]]*=" $CONFIG_FILES; then
+            sed -i "/^\[\\*\\.md\]/a ${escaped_line}" .vale.ini.temp
+            echo "  Inserted: ${line}"
+          fi
+        done < "$OVERRIDE_FILE"
+
+        if [ "${DEBUG}" == "true" ]; then
+          echo "::debug::Final Vale config:"
+          cat .vale.ini.temp
+          shopt -s nullglob
+          for pkg_config in .vale-styles/.vale-config/*.ini; do
+            echo "::debug::Package config $(basename "$pkg_config"):"
+            cat "$pkg_config"
+          done
+          shopt -u nullglob
+        fi
+
+    - name: Get changed files
+      id: changed-files
+      if: inputs.files == ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        if [ -z "${{ github.event.pull_request.number }}" ]; then
+          echo "Not running in PR context, no files to check"
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        else
+          echo "Fetching changed files from GitHub API..."
+          # gh api uses GH_TOKEN automatically (authenticated = no rate limit issues).
+          # --paginate handles PRs with more than 30 changed files.
+          # jq -s 'add // []' merges paginated arrays into one before filtering.
+          gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate 2>/dev/null \
+            | jq -rs 'add // [] | .[] | select(.status != "removed") | .filename' \
+            | grep -E '\.md$' > changed_files.txt || true
+
+          if [ -s changed_files.txt ]; then
+            echo "Found changed files:"
+            cat changed_files.txt
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "No markdown files changed in this PR"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+        fi
+
+    - name: Determine files to lint
+      id: files-to-lint
+      shell: bash
+      env:
+        INPUT_FILES: ${{ inputs.files }}
+      run: |
+        if [ -n "${INPUT_FILES}" ]; then
+          echo "Using provided files: ${INPUT_FILES}"
+          echo "${INPUT_FILES}" | tr ' ' '\n' | grep -E '\.md$' > files_to_lint.txt || true
+          if [ -s files_to_lint.txt ]; then
+            echo "has_files=true" >> $GITHUB_OUTPUT
+          else
+            echo "No markdown files in provided file list"
+            echo "has_files=false" >> $GITHUB_OUTPUT
+          fi
+        elif [ "${{ steps.changed-files.outputs.has_changes }}" == "true" ]; then
+          echo "Using changed files from PR"
+          cp changed_files.txt files_to_lint.txt
+          echo "has_files=true" >> $GITHUB_OUTPUT
+        else
+          echo "No files to lint"
+          echo "has_files=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Filter files by vale-paths
+      id: filter-paths
+      if: steps.files-to-lint.outputs.has_files == 'true' && (inputs.vale-paths != '' || inputs.include-paths != '')
+      shell: bash
+      env:
+        INCLUDE_PATHS: ${{ inputs.vale-paths || inputs.include-paths }}
+        DEBUG: ${{ inputs.debug }}
+      run: |
+        python3 ${{ github.action_path }}/path_filter.py
+
+    - name: Update has_files output after filtering
+      id: final-files-check
+      if: steps.files-to-lint.outputs.has_files == 'true'
+      shell: bash
+      run: |
+        # Check if files_to_lint.txt exists and has content after potential filtering
+        if [ -f files_to_lint.txt ] && [ -s files_to_lint.txt ]; then
+          echo "has_files=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_files=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Setup temp directory
+      id: setup-temp
+      if: steps.final-files-check.outputs.has_files == 'true'
+      shell: bash
+      env:
+        DEBUG: ${{ inputs.debug }}
+      run: |
+        # Create temp directory for Vale operation
+        TEMP_DIR=$(mktemp -d -t vale-lint-XXXXXX)
+        echo "temp_dir=$TEMP_DIR" >> $GITHUB_OUTPUT
+        echo "Created temp directory: $TEMP_DIR"
+
+        if [ "${DEBUG}" == "true" ]; then
+          echo "::debug::Temp directory created at $TEMP_DIR"
+        fi
+
+    - name: Get modified line ranges
+      id: modified-lines
+      if: steps.final-files-check.outputs.has_files == 'true' && github.event.pull_request.number != ''
+      shell: bash
+      env:
+        TEMP_DIR: ${{ steps.setup-temp.outputs.temp_dir }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        echo "Fetching line ranges from GitHub API..."
+
+        # Fetch all PR file patches in one authenticated call.
+        # jq -s 'add // []' merges paginated arrays into one.
+        PR_PATCHES=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+          --paginate 2>/dev/null | jq -s 'add // []') || PR_PATCHES=""
+
+        if [ -z "$PR_PATCHES" ] || [ "$PR_PATCHES" = "null" ] || [ "$PR_PATCHES" = "[]" ]; then
+          echo "::warning::Could not fetch PR patches; line-range filtering will be skipped (Vale will lint entire files)"
+        else
+          > "$TEMP_DIR/line_ranges.txt"
+
+          while IFS= read -r file; do
+            # Extract the patch for this file from the API response.
+            # .patch is null for binary files or diffs that exceed GitHub's size limit.
+            patch=$(echo "$PR_PATCHES" | jq -r --arg f "$file" \
+              '.[] | select(.filename == $f) | .patch // empty')
+
+            if [ -n "$patch" ]; then
+              echo "$patch" | { grep '^@@' || true; } | while read -r hunk; do
+                # Extract start line and count from @@ -x,y +a,b @@
+                range=$(echo "$hunk" | sed -n 's/^@@ -[0-9,]* +\([0-9]*\),*\([0-9]*\).*/\1 \2/p')
+                start=$(echo "$range" | awk '{print $1}')
+                count=$(echo "$range" | awk '{print $2}')
+
+                # If count is empty, exactly 1 line was changed
+                if [ -z "$count" ]; then
+                  count=1
+                fi
+
+                echo "$file|$start|$count" >> "$TEMP_DIR/line_ranges.txt"
+              done
+            fi
+          done < files_to_lint.txt
+
+          if [ -s "$TEMP_DIR/line_ranges.txt" ]; then
+            echo "Modified line ranges:"
+            cat "$TEMP_DIR/line_ranges.txt"
+            cp "$TEMP_DIR/line_ranges.txt" line_ranges.txt
+          fi
+        fi
+
+    - name: Run Vale and generate report
+      id: vale-report
+      if: steps.final-files-check.outputs.has_files == 'true'
+      shell: bash
+      env:
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        DEBUG: ${{ inputs.debug }}
+        DISABLE_TELEMETRY: ${{ inputs.disable_telemetry }}
+      run: |
+        if [ "${DEBUG}" == "true" ]; then
+          echo "::debug::Running Vale with debug mode enabled"
+          set -x
+        fi
+
+        echo "Running Vale on files..."
+
+        # Show files to lint
+        echo "Files to lint:"
+        cat files_to_lint.txt
+
+        # Verify Vale config exists
+        if [ ! -f .vale.ini.temp ]; then
+          echo "::error::Vale config file .vale.ini.temp not found"
+          exit 1
+        fi
+
+        # Verify styles were downloaded
+        if [ ! -d .vale-styles ]; then
+          echo "::error::Vale styles directory .vale-styles not found. Vale sync may have failed."
+          exit 1
+        fi
+
+        # Run Vale with JSON output on all files, with a 5-minute timeout to prevent hangs
+        # Capture stderr separately to avoid corrupting JSON output
+        VALE_STDERR=$(mktemp)
+        VALE_EXIT=0
+
+        # Read files into an array to handle filenames safely
+        mapfile -t VALE_FILES < files_to_lint.txt
+        timeout 300 vale --config=.vale.ini.temp --output=JSON "${VALE_FILES[@]}" > vale_output.json 2>"$VALE_STDERR" || VALE_EXIT=$?
+
+        if [ $VALE_EXIT -eq 124 ]; then
+          echo "::error::Vale timed out after 5 minutes"
+          exit 1
+        fi
+
+        if [ $VALE_EXIT -ne 0 ]; then
+          echo "Vale exited with code $VALE_EXIT"
+          if [ -s "$VALE_STDERR" ]; then
+            echo "Vale stderr output:"
+            cat "$VALE_STDERR"
+          fi
+        fi
+        rm -f "$VALE_STDERR"
+
+        # Check if vale_output.json exists and is valid JSON
+        if [ ! -f vale_output.json ]; then
+          echo "::warning::vale_output.json was not created"
+        elif ! jq empty vale_output.json 2>/dev/null; then
+          echo "::warning::vale_output.json is not valid JSON. Contents:"
+          head -20 vale_output.json
+        fi
+        
+        if [ ! -f vale_output.json ] || ! jq empty vale_output.json 2>/dev/null; then
+          echo "No issues found or Vale produced no output"
+          echo "has_issues=false" >> $GITHUB_OUTPUT
+          echo "error_count=0" >> $GITHUB_OUTPUT
+
+          # Create clean report
+          {
+            echo "## ✅ Vale Linting Results"
+            echo ""
+            echo "**No issues found on modified lines!**"
+            echo ""
+            echo "---"
+            echo ""
+            echo "The Vale linter checks documentation changes against the [Elastic Docs style guide](https://www.elastic.co/docs/contribute-docs/style-guide)."
+            echo ""
+            echo "To use Vale locally or report issues, refer to [Elastic style guide for Vale](https://www.elastic.co/docs/contribute-docs/vale-linter)."
+          } > vale_report.md
+          
+          # Also create issue_counts.txt and vale_results.json for artifact upload
+          echo "errors=0" > issue_counts.txt
+          echo "warnings=0" >> issue_counts.txt
+          echo "suggestions=0" >> issue_counts.txt
+          echo '{"summary":{"errors":0,"warnings":0,"suggestions":0},"issues":[]}' > vale_results.json
+          exit 0
+        fi
+
+        # Run the Python reporter script
+        echo "Running vale_reporter.py..."
+        python3 ${{ github.action_path }}/vale_reporter.py
+
+        # Set outputs from the generated counts file
+        if [ -f issue_counts.txt ]; then
+          # Parse issue counts safely (no source/eval)
+          errors=$(grep '^errors=' issue_counts.txt | head -1 | cut -d= -f2)
+          warnings=$(grep '^warnings=' issue_counts.txt | head -1 | cut -d= -f2)
+          suggestions=$(grep '^suggestions=' issue_counts.txt | head -1 | cut -d= -f2)
+
+          # Validate they are integers (default to 0 if not)
+          [[ "$errors" =~ ^[0-9]+$ ]] || errors=0
+          [[ "$warnings" =~ ^[0-9]+$ ]] || warnings=0
+          [[ "$suggestions" =~ ^[0-9]+$ ]] || suggestions=0
+
+          if [ $errors -gt 0 ] || [ $warnings -gt 0 ] || [ $suggestions -gt 0 ]; then
+            echo "has_issues=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_issues=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo "error_count=$errors" >> $GITHUB_OUTPUT
+          echo "warning_count=$warnings" >> $GITHUB_OUTPUT
+          echo "suggestion_count=$suggestions" >> $GITHUB_OUTPUT
+
+          if [ "${DEBUG}" == "true" ]; then
+            echo "::debug::Errors: $errors, Warnings: $warnings, Suggestions: $suggestions"
+          fi
+        else
+          echo "::warning::Failed to read issue counts"
+          echo "has_issues=false" >> $GITHUB_OUTPUT
+          echo "error_count=0" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Write Job Summary
+      if: always() && steps.final-files-check.outputs.has_files == 'true'
+      shell: bash
+      run: |
+        if [ -f vale_report.md ]; then
+          cat vale_report.md >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Upload Vale results
+      if: always() && steps.final-files-check.outputs.has_files == 'true' && inputs.upload_artifact == 'true'
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: |
+          vale_report.md
+          vale_results.json
+          issue_counts.txt
+        retention-days: 1
+
+    - name: Set artifact output
+      id: set-artifact-output
+      if: always()
+      shell: bash
+      env:
+        HAS_FILES: ${{ steps.final-files-check.outputs.has_files }}
+        UPLOAD_ARTIFACT: ${{ inputs.upload_artifact }}
+      run: |
+        if [ "$HAS_FILES" == "true" ] && [ "$UPLOAD_ARTIFACT" == "true" ]; then
+          echo "artifact_uploaded=true" >> $GITHUB_OUTPUT
+        else
+          echo "artifact_uploaded=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Fail on errors
+      if: inputs.fail_on_error == 'true' && steps.vale-report.outputs.error_count != '0'
+      shell: bash
+      run: |
+        echo "❌ Vale found ${{ steps.vale-report.outputs.error_count }} error-level issue(s)"
+        exit 1
+
+    - name: Cleanup
+      if: always()
+      shell: bash
+      env:
+        TEMP_DIR: ${{ steps.setup-temp.outputs.temp_dir }}
+        DEBUG: ${{ inputs.debug }}
+      run: |
+        if [ "${DEBUG}" == "true" ]; then
+          echo "::debug::Cleaning up temporary files"
+        fi
+
+        # Clean up workspace files (keep artifacts for upload)
+        rm -f .vale.ini.temp
+        rm -f changed_files.txt
+        rm -f files_to_lint.txt
+        rm -f vale_output.json
+        rm -f line_ranges.txt
+        rm -rf .vale-styles
+
+        # Clean up temp directory if it exists
+        if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
+          rm -rf "$TEMP_DIR"
+          if [ "${DEBUG}" == "true" ]; then
+            echo "::debug::Removed temp directory: $TEMP_DIR"
+          fi
+        fi
+
+        echo "✓ Cleanup complete"

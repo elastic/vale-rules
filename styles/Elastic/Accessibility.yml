@@ -1,5 +1,6 @@
 extends: existence
 message: "Don't use language (such as '%s') that defines people by their disability."
+link: https://www.elastic.co/docs/contribute-docs/style-guide/accessibility#avoid-violent-offensive-ableist-terminology
 level: warning
 ignorecase: true
 tokens:

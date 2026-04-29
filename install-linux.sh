@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Licensed to Elasticsearch B.V under one or more agreements.
+# Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
+# See the LICENSE file in the project root for more information
+
 # Elastic Vale Style Guide Installation Script for Linux
 # This script installs Vale and configures it to use the Elastic style guide
 
@@ -98,31 +102,28 @@ XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 VALE_DATA_DIR="$XDG_DATA_HOME/vale"
 VALE_CONFIG_DIR="$XDG_CONFIG_HOME/vale"
 VALE_CONFIG_FILE="$VALE_CONFIG_DIR/.vale.ini"
+VALE_STYLES_DIR="$XDG_DATA_HOME/vale/styles"
 
-# 5. Clean existing Vale installation
-print_info "Cleaning existing Vale installation..."
-if [ -d "$VALE_DATA_DIR" ]; then
-    print_info "Removing existing Vale data directory: $VALE_DATA_DIR"
-    if rm -rf "$VALE_DATA_DIR"; then
-        print_success "✓ Existing Vale data cleaned"
+# 5. Check existing Vale installation
+if [ -d "$VALE_CONFIG_DIR" ] || [ -d "$VALE_DATA_DIR" ]; then
+    print_info "Existing Vale installation detected"
+    
+    # Check if it's an Elastic installation
+    if [ -d "$VALE_STYLES_DIR/Elastic" ] || grep -q "elastic-vale.zip" "$VALE_CONFIG_FILE" 2>/dev/null; then
+        print_info "Detected existing Elastic Vale installation - will update"
     else
-        print_error "Failed to clean existing Vale data"
-        exit 1
+        print_info "Detected non-Elastic Vale installation"
+        echo -n "This will replace your existing Vale configuration. Continue? [y/N] "
+        read -r response
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            print_info "Installation cancelled by user"
+            exit 0
+        fi
+        print_info "Removing existing Vale installation..."
+        rm -rf "$VALE_DATA_DIR" "$VALE_CONFIG_DIR"
     fi
 else
-    print_info "No existing Vale data found"
-fi
-
-if [ -d "$VALE_CONFIG_DIR" ]; then
-    print_info "Removing existing Vale config directory: $VALE_CONFIG_DIR"
-    if rm -rf "$VALE_CONFIG_DIR"; then
-        print_success "✓ Existing Vale config cleaned"
-    else
-        print_error "Failed to clean existing Vale config"
-        exit 1
-    fi
-else
-    print_info "No existing Vale config found"
+    print_info "No existing Vale installation found"
 fi
 
 # 6. Create Vale configuration directory and file
@@ -130,25 +131,25 @@ print_info "Setting up Vale configuration..."
 mkdir -p "$VALE_CONFIG_DIR"
 
 # Create the .vale.ini file
-print_info "Creating new configuration at $VALE_CONFIG_FILE..."
+print_info "Creating configuration at $VALE_CONFIG_FILE..."
 
-# Create or overwrite the .vale.ini file with Packages configuration
+# Create minimal .vale.ini - the package will provide the full config via merge
 cat > "$VALE_CONFIG_FILE" << 'EOF'
 StylesPath = styles
-MinAlertLevel = suggestion
 
-Packages = https://github.com/elastic/vale-rules/releases/latest/download/Elastic.zip
-
-[*.md]
-BasedOnStyles = Elastic
-
-[*.adoc]
-BasedOnStyles = Elastic
+Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
 EOF
 
 print_success "✓ Vale configuration created at: $VALE_CONFIG_FILE"
 
 # 7. Download and install Elastic style package
+# Remove existing Elastic styles to force re-download (vale sync doesn't have a --force flag)
+if [ -d "$VALE_STYLES_DIR/Elastic" ]; then
+    print_info "Removing existing Elastic styles to ensure latest version..."
+    rm -rf "$VALE_STYLES_DIR/Elastic"
+    rm -rf "$VALE_STYLES_DIR/.vale-config"
+fi
+
 print_info "Downloading and installing Elastic style package..."
 if vale --config="$VALE_CONFIG_FILE" sync; then
     print_success "✓ Elastic styles package downloaded and installed successfully"
@@ -158,7 +159,6 @@ else
 fi
 
 # 8. Verify that the installed styles are accessible
-VALE_STYLES_DIR="$XDG_DATA_HOME/vale/styles"
 print_info "Verifying installed style guide..."
 if [ -d "$VALE_STYLES_DIR/Elastic" ] && ls "$VALE_STYLES_DIR/Elastic"/*.yml > /dev/null 2>&1; then
     # Check if VERSION file exists and read it
@@ -197,7 +197,7 @@ echo
 echo "Configuration file location: $VALE_CONFIG_FILE"
 echo "Styles installed to: $VALE_STYLES_DIR/Elastic"
 echo
-echo "To update the styles in the future:"
-echo "  • Re-run this script, or"
-echo "  • Run 'vale --config=\"$VALE_CONFIG_FILE\" sync' to update to the latest package"
+echo "To update the styles in the future, re-run this script or run:"
+echo "  rm -rf \"$VALE_STYLES_DIR/Elastic\" \"$VALE_STYLES_DIR/.vale-config\""
+echo "  vale --config=\"$VALE_CONFIG_FILE\" sync"
 

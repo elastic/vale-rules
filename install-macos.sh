@@ -1,26 +1,33 @@
-# Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
-# or more contributor license agreements. See the NOTICE file distributed with
-# this work for additional information regarding copyright
-# ownership. Elasticsearch B.V. licenses this file to you under
-# the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#	http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-
 #!/bin/bash
+
+# Licensed to Elasticsearch B.V under one or more agreements.
+# Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
+# See the LICENSE file in the project root for more information
 
 # Elastic Vale Style Guide Installation Script for macOS
 # This script installs Vale and configures it to use the Elastic style guide
 
 set -e  # Exit on any error
+
+# Parse flags
+ENABLE_SPELLING=false
+for arg in "$@"; do
+    case "$arg" in
+        --enable-spelling) ENABLE_SPELLING=true ;;
+        -h|--help)
+            echo "Usage: $0 [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --enable-spelling  Enable the experimental Elastic.Spelling rule"
+            echo "  -h, --help         Show this help message"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $arg (use --help for usage)"
+            exit 1
+            ;;
+    esac
+done
 
 # Colors for output
 RED='\033[0;31m'
@@ -90,48 +97,56 @@ if [ "$VALE_ALREADY_INSTALLED" = false ]; then
     fi
 fi
 
-# 4. Clean existing Vale installation
+# 4. Check existing Vale installation
 VALE_CONFIG_DIR="$HOME/Library/Application Support/vale"
-print_info "Cleaning existing Vale installation..."
+VALE_CONFIG_FILE="$VALE_CONFIG_DIR/.vale.ini"
+VALE_STYLES_DIR="$VALE_CONFIG_DIR/styles"
+
 if [ -d "$VALE_CONFIG_DIR" ]; then
-    print_info "Removing existing Vale directory: $VALE_CONFIG_DIR"
-    if rm -rf "$VALE_CONFIG_DIR"; then
-        print_success "✓ Existing Vale installation cleaned"
+    print_info "Existing Vale installation detected at: $VALE_CONFIG_DIR"
+    
+    # Check if it's an Elastic installation
+    if [ -d "$VALE_STYLES_DIR/Elastic" ] || grep -q "elastic-vale.zip" "$VALE_CONFIG_FILE" 2>/dev/null; then
+        print_info "Detected existing Elastic Vale installation - will update"
     else
-        print_error "Failed to clean existing Vale installation"
-        exit 1
+        print_info "Detected non-Elastic Vale installation"
+        echo -n "This will replace your existing Vale configuration. Continue? [y/N] "
+        read -r response
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            print_info "Installation cancelled by user"
+            exit 0
+        fi
+        print_info "Removing existing Vale installation..."
+        rm -rf "$VALE_CONFIG_DIR"
     fi
 else
     print_info "No existing Vale installation found"
 fi
 
 # 5. Create or update Vale configuration directory and file
-VALE_CONFIG_DIR="$HOME/Library/Application Support/vale"
-VALE_CONFIG_FILE="$VALE_CONFIG_DIR/.vale.ini"
-
 print_info "Setting up Vale configuration..."
 mkdir -p "$VALE_CONFIG_DIR"
 
 # Create the .vale.ini file
-print_info "Creating new configuration at $VALE_CONFIG_FILE..."
+print_info "Creating configuration at $VALE_CONFIG_FILE..."
 
-# Create or overwrite the .vale.ini file with Packages configuration
+# Create minimal .vale.ini - the package will provide the full config via merge
 cat > "$VALE_CONFIG_FILE" << 'EOF'
 StylesPath = styles
-MinAlertLevel = suggestion
 
-Packages = https://github.com/elastic/vale-rules/releases/latest/download/Elastic.zip
-
-[*.md]
-BasedOnStyles = Elastic
-
-[*.adoc]
-BasedOnStyles = Elastic
+Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
 EOF
 
 print_success "✓ Vale configuration created at: $VALE_CONFIG_FILE"
 
 # 6. Download and install Elastic style package
+# Remove existing Elastic styles to force re-download (vale sync doesn't have a --force flag)
+if [ -d "$VALE_STYLES_DIR/Elastic" ]; then
+    print_info "Removing existing Elastic styles to ensure latest version..."
+    rm -rf "$VALE_STYLES_DIR/Elastic"
+    rm -rf "$VALE_STYLES_DIR/.vale-config"
+fi
+
 print_info "Downloading and installing Elastic style package..."
 if vale --config="$VALE_CONFIG_FILE" sync; then
     print_success "✓ Elastic styles package downloaded and installed successfully"
@@ -140,8 +155,20 @@ else
     exit 1
 fi
 
-# 7. Verify that the installed styles are accessible
-VALE_STYLES_DIR="$VALE_CONFIG_DIR/styles"
+# 7. Apply optional rule overrides
+if [ "$ENABLE_SPELLING" = true ]; then
+    print_info "Enabling experimental spelling rule..."
+    PACKAGE_CONFIG="$VALE_STYLES_DIR/.vale-config/0-elastic-vale.ini"
+    if [ -f "$PACKAGE_CONFIG" ] && grep -q "Elastic\.Spelling" "$PACKAGE_CONFIG"; then
+        sed -i '' 's/Elastic\.Spelling = NO/Elastic.Spelling = YES/' "$PACKAGE_CONFIG"
+        print_success "✓ Spelling rule enabled"
+    else
+        print_error "Could not find packaged config to enable spelling"
+        print_info "You can enable it manually by editing: $PACKAGE_CONFIG"
+    fi
+fi
+
+# 8. Verify that the installed styles are accessible
 print_info "Verifying installed style guide..."
 if [ -d "$VALE_STYLES_DIR/Elastic" ] && ls "$VALE_STYLES_DIR/Elastic"/*.yml > /dev/null 2>&1; then
     # Check if VERSION file exists and read it
@@ -156,7 +183,7 @@ else
     exit 1
 fi
 
-# 8. Final verification
+# 9. Final verification
 print_info "Performing final verification..."
 if vale --config="$VALE_CONFIG_FILE" --help &> /dev/null; then
     print_success "✓ Vale configuration is valid"
@@ -165,7 +192,7 @@ else
     exit 1
 fi
 
-# 9. Success message
+# 10. Success message
 echo
 print_success "🎉 Installation completed successfully!"
 echo
@@ -177,9 +204,15 @@ echo "Vale is now configured with the Elastic style guide. You can:"
 echo "  • Run 'vale <file>' to check a specific file"
 echo "  • Run 'vale <directory>' to check all supported files in a directory"
 echo
+if [ "$ENABLE_SPELLING" = true ]; then
+    echo "Spelling rule: ENABLED (experimental)"
+else
+    echo "Spelling rule: disabled (run with --enable-spelling to enable)"
+fi
+echo
 echo "Configuration file location: $VALE_CONFIG_FILE"
 echo "Styles installed to: $VALE_STYLES_DIR/Elastic"
 echo
-echo "To update the styles in the future:"
-echo "  • Re-run this script, or"
-echo "  • Run 'vale --config=\"$VALE_CONFIG_FILE\" sync' to update to the latest package"
+echo "To update the styles in the future, re-run this script or run:"
+echo "  rm -rf \"$VALE_STYLES_DIR/Elastic\" \"$VALE_STYLES_DIR/.vale-config\""
+echo "  vale --config=\"$VALE_CONFIG_FILE\" sync"
