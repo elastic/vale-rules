@@ -10,7 +10,6 @@ swap:
   '\b(ie|i\.e)\b': that is
   '\bad-hoc\b': if needed
   '\bad hoc\b': if needed
-  '\bvia\b': using
   '\bvice versa\b': and the reverse
   '\bvs\b': versus
   '(?<!/)\betc\b': and so on
