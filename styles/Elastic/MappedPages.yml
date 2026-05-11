@@ -1,7 +1,7 @@
 extends: existence
-message: "Only technical writers should add or update '%s' in frontmatter."
+message: "Only technical writers should add or update mapped_pages in frontmatter."
 level: warning
 nonword: true
 scope: raw
 tokens:
-  - '(?ms)\A---\n.*?^[ \t]*mapped_pages:.*?\n---'
+  - '(?ms)\A---\n.*?^[ \t]*mapped_pages:.*?^---'
