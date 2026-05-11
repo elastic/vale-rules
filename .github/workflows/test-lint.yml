@@ -82,6 +82,7 @@ jobs:
           rules_to_check=(
             "Elastic.Articles"
             "Elastic.BritishSpellings"
+            "Elastic.MappedPages"
             "Elastic.WordChoice"
             "Elastic.OxfordComma"
             "Elastic.Wordiness"

@@ -1,3 +1,8 @@
+---
+mapped_pages:
+  - https://www.elastic.co/guide/en/ecs/current/ecs-entity_reference.html
+---
+
 # Sample rule violations for E2E testing
 
 This file contains intentional style violations to verify Vale rules are working.

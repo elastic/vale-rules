@@ -1,0 +1,7 @@
+extends: existence
+message: "Only technical writers should add or update '%s' in frontmatter."
+level: warning
+nonword: true
+scope: raw
+tokens:
+  - '(?m)^[ \t]*mapped_pages:\s*$'
