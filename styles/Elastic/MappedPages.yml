@@ -4,4 +4,4 @@ level: warning
 nonword: true
 scope: raw
 tokens:
-  - '(?m)^[ \t]*mapped_pages:\s*$'
+  - '(?m)^[ \t]*mapped_pages:'
