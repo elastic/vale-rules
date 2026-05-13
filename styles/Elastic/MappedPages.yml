@@ -1,5 +1,5 @@
 extends: existence
-message: "Only technical writers should add or update mapped_pages in frontmatter."
+message: "mapped_pages should only be added or updated in rare scenarios. Talk with your local technical writer before pushing changes to this key."
 level: warning
 nonword: true
 scope: raw
