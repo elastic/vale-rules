@@ -78,17 +78,22 @@ jobs:
         run: |
           echo "Checking that key rules fired..."
           
-          # These rules should all trigger on sample-violations.md
+          # These rules should all trigger on sample-violations.md with both
+          # released and local styles.
           rules_to_check=(
             "Elastic.Articles"
             "Elastic.BritishSpellings"
-            "Elastic.MappedPages"
             "Elastic.WordChoice"
             "Elastic.OxfordComma"
             "Elastic.Wordiness"
             "Elastic.DontUse"
             "Elastic.Exclamation"
           )
+
+          # This rule only exists in the PR's local styles until the next release.
+          if [ "${{ matrix.use_local_styles }}" = "true" ]; then
+            rules_to_check+=("Elastic.MappedPages")
+          fi
           
           failed=0
           for rule in "${rules_to_check[@]}"; do
