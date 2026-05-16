@@ -154,12 +154,12 @@ runs:
         # (e.g., a malicious PR could plant .vale.ini.temp -> .git/HEAD)
         rm -f .vale.ini.temp
 
+        # Vale 3.14.2+ requires StylesPath to exist before `vale sync` (errata-ai/vale#1096)
+        mkdir -p .vale-styles
+
         cat > .vale.ini.temp << 'EOF'
         StylesPath = .vale-styles
 
-        # Vale 3.14.2+ requires StylesPath to exist before `vale sync` (errata-ai/vale#1096)
-        mkdir -p .vale-styles
-        
         Packages = https://github.com/elastic/vale-rules/releases/latest/download/elastic-vale.zip
         EOF
 
