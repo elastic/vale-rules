@@ -41,56 +41,19 @@ curl -fsSL https://raw.githubusercontent.com/elastic/vale-rules/main/install-mac
 
 Install the [Vale VSCode](https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode) extension to view Vale checks when saving a document.
 
-## Add the Vale action to your repo
+## Use Vale in GitHub Actions
 
-Add the Elastic Vale linter to your repository's CI/CD pipeline using a two-workflow setup that supports fork PRs:
+The reusable GitHub Actions for running Vale and posting pull request comments live in [`elastic/docs-actions`](https://github.com/elastic/docs-actions):
 
 ```yaml
-# .github/workflows/vale-lint.yml
-name: Vale Documentation Linting
-
-on:
-  pull_request:
-    paths:
-      - 'docs/**/*.md'
-      - 'docs/**/*.adoc'
-
-permissions:
-  contents: read
-
-jobs:
-  vale:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Run Vale Linter
-        uses: elastic/vale-rules/lint@main
+- uses: elastic/docs-actions/vale/lint@v1
 ```
 
-### Action inputs
+```yaml
+- uses: elastic/docs-actions/vale/report@v1
+```
 
-The lint action supports these inputs:
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| `files` | Files or directories to lint (space-separated). If not provided, lints changed files in PR. | `''` |
-| `vale-paths` | Paths to include for linting (multi-line or space-separated). Supports glob patterns and `!` negation to exclude paths. Only files matching these paths will be linted. | `''` |
-| `fail_on_error` | Fail the action if Vale finds error-level issues. | `'false'` |
-| `vale_version` | Vale version to install. | `'latest'` |
-| `debug` | Enable debug output. | `'false'` |
-| `upload_artifact` | Upload Vale results as a workflow artifact. | `'true'` |
-| `artifact_name` | Name for the uploaded artifact. | `'vale-results'` |
-
-### Action outputs
-
-| Output | Description |
-|--------|-------------|
-| `artifact_uploaded` | `true` if Vale results were uploaded as an artifact, `false` otherwise. |
+This repository only publishes the Vale rules package that those actions download and use.
 
 ### Per-repo rule overrides
 
@@ -109,7 +72,7 @@ Use `vale-paths` to limit linting to specific directories. This is useful when m
 
 ```yaml
 - name: Run Vale Linter
-  uses: elastic/vale-rules/lint@main
+  uses: elastic/docs-actions/vale/lint@v1
   with:
     vale-paths: |
       docs/team-a
@@ -120,7 +83,7 @@ With glob patterns:
 
 ```yaml
 - name: Run Vale Linter
-  uses: elastic/vale-rules/lint@main
+  uses: elastic/docs-actions/vale/lint@v1
   with:
     vale-paths: |
       docs/guides/**
@@ -131,7 +94,7 @@ With negation patterns to exclude specific subdirectories:
 
 ```yaml
 - name: Run Vale Linter
-  uses: elastic/vale-rules/lint@main
+  uses: elastic/docs-actions/vale/lint@v1
   with:
     vale-paths: |
       docs/reference/**
@@ -141,37 +104,6 @@ With negation patterns to exclude specific subdirectories:
 Space-separated format is also supported: `vale-paths: "docs/team-a docs/team-b"`
 
 > **Note:** The `include-paths` input still works but is deprecated. Use `vale-paths` instead for consistency with `docs-actions` workflows.
-
-```yaml
-# .github/workflows/vale-report.yml
-name: Vale Report
-
-on:
-  workflow_run:
-    workflows: ["Vale Documentation Linting"]
-    types:
-      - completed
-
-permissions:
-  pull-requests: read
-
-jobs:
-  report:
-    runs-on: ubuntu-latest
-    if: github.event.workflow_run.event == 'pull_request'
-    permissions:
-      pull-requests: write
-    
-    steps:
-      - name: Post Vale Results
-        uses: elastic/vale-rules/report@main
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-```
-
-This two-workflow approach ensures fork PRs are linted safely while still posting results as PR comments.
-
-Refer to [ACTION_USAGE.md](ACTION_USAGE.md) for detailed documentation and examples.
 
 ## Spelling rule (experimental)
 
@@ -209,26 +141,13 @@ Or add the override manually to your local Vale config:
 Elastic.Spelling = YES
 ```
 
-## Security considerations for CI workflows
-
-The lint action processes PR content. Follow these guidelines when setting up your workflows:
-
-- **Use `pull_request`, not `pull_request_target`**, for the lint workflow.
-- **Set `persist-credentials: false`** on the checkout step. The lint action does not need git credentials after checkout.
-- **Set minimal `permissions`**: the lint workflow only needs `contents: read`. Only the report workflow (via `workflow_run`) needs `pull-requests: write`.
-
-The `.vale-overrides.ini` feature only allows overriding rule-level settings (`Elastic.*` rules and `MinAlertLevel`). Structural config keys like `StylesPath`, `BasedOnStyles`, and `Packages` cannot be overridden.
-
 ## Folder structure
 
-- `lint/action.yml` - GitHub Composite Action for running the Vale linter.
-- `report/action.yml` - GitHub Composite Action for posting Vale results as PR comments.
-- `ACTION_USAGE.md` - Detailed documentation for using the GitHub Action.
 - `install-macos.sh` - Automated installation script for macOS.
 - `install-linux.sh` - Automated installation script for Linux.
 - `install-windows.ps1` - Automated installation script for Windows.
 - `styles/Elastic/` - Elastic linting rules for Vale. See [Styles](https://vale.sh/docs/topics/styles/).
-- `styles/config/vocabularies/` - Vocabulary files for accepted terms (ElasticTerms, ThirdPartyProducts, TechJargon).
+- `styles/config/vocabularies/` - Vocabulary files for accepted terms (ElasticTerms, ThirdPartyProducts, and TechJargon).
 - `.github/workflows/` - CI/CD workflows for testing and releases.
 
 The installation scripts create Vale configurations at platform-specific locations:
@@ -298,7 +217,7 @@ The local `.vale.ini` configuration uses `StylesPath = styles`, which points dir
 
 To create a new release of the Vale package, you have two options:
 
-### Option 1: Manual workflow dispatch (recommended)
+### Option 1: manual workflow dispatch (recommended)
 
 1. Go to the [Actions tab](https://github.com/elastic/vale-rules/actions/workflows/release.yml) in GitHub
 2. Click "Run workflow"
@@ -312,7 +231,7 @@ The GitHub workflow will automatically:
 - Create a new GitHub release with the version tag
 - Upload the package as a release asset
 
-### Option 2: Push a tag manually
+### Option 2: push a tag manually
 
 1. Update the version and make your changes.
 2. Commit and push your changes to the main branch.
