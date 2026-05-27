@@ -4,4 +4,4 @@ link: https://www.elastic.co/docs/contribute-docs/style-guide/grammar-spelling#p
 level: warning
 nonword: true
 tokens:
-  - '[""][^"""]+[""][.,]'
+  - '[""][^"""]*(?:[A-Za-z]{4,}|\s)[^"""]*[""][.,]'
