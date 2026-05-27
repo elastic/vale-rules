@@ -53,7 +53,7 @@ The reusable GitHub Actions for running Vale and posting pull request comments l
 - uses: elastic/docs-actions/vale/report@v1
 ```
 
-This repository only publishes the Vale rules package that those actions download and use.
+This repository only publishes the Vale rules package that those actions download and use. The packaged configuration applies Elastic rules to Markdown and MDX files by default.
 
 ### Per-repo rule overrides
 
@@ -64,7 +64,7 @@ Elastic.Spelling = YES
 Elastic.We = suggestion
 ```
 
-The lint action automatically detects this file and merges it into the Vale configuration. For existing keys, values are replaced in place. For new keys, they are inserted into the `[*.md]` section. Section headers in the override file are ignored.
+The lint action automatically detects this file and merges it into the Vale configuration. For existing keys, values are replaced in place. For new keys, they are inserted into the first file-type section. Section headers are ignored, except for constrained YAML sections such as `[*.{yml,yaml}]`, which can opt a repository into linting YAML files with the packaged Elastic rules.
 
 ### Filtering specific paths
 
@@ -137,7 +137,7 @@ curl -fsSL https://raw.githubusercontent.com/elastic/vale-rules/main/install-mac
 Or add the override manually to your local Vale config:
 
 ```ini
-[*.md]
+[*.{md,mdx}]
 Elastic.Spelling = YES
 ```
 
