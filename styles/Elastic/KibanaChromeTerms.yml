@@ -1,0 +1,18 @@
+extends: substitution
+message: "Consider using '%s' instead of '%s' when referring to parts of the Kibana chrome."
+link: https://www.elastic.co/docs/contribute-docs/style-guide/ui-writing#naming-kibana-ui-elements
+ignorecase: true
+level: suggestion
+action:
+  name: replace
+swap:
+  main menu: "navigation menu"
+  side navigation: "navigation menu"
+  side nav: "navigation menu"
+  sidenav: "navigation menu"
+  primary navigation: "navigation menu"
+  navbar: "navigation menu"
+  app menu bar: "application menu"
+  app menu: "application menu"
+  app workspace: "workspace"
+  classic navigation: "classic view"
