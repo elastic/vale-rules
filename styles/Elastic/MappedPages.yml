@@ -1,5 +1,5 @@
 extends: existence
-message: "mapped_pages should only be added or updated in rare scenarios. Talk with your local technical writer before pushing changes to this key."
+message: "Avoid editing mapped_pages unless you are preserving an existing URL mapping. Talk with your local technical writer before changing this key."
 level: warning
 nonword: true
 scope: raw

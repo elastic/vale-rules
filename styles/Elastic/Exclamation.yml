@@ -1,5 +1,5 @@
 extends: existence
-message: "Use exclamation points sparingly. Consider removing the exclamation point."
+message: "Use exclamation points sparingly. Remove the exclamation point unless it appears in UI text."
 link: https://www.elastic.co/docs/contribute-docs/style-guide/voice-tone#tone
 nonword: true
 level: suggestion

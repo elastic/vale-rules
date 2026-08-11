@@ -1,5 +1,5 @@
 extends: existence
-message: "In general, don't use an ellipsis."
+message: "Use ellipses sparingly. Remove the ellipsis unless it appears in UI text."
 link: https://www.elastic.co/docs/contribute-docs/style-guide/voice-tone#write-like-a-minimalist
 nonword: true
 level: suggestion

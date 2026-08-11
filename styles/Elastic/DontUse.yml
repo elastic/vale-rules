@@ -1,5 +1,5 @@
 extends: existence
-message: "Don't use '%s'."
+message: "Don't use '%s'. Choose a more precise or reader-focused term."
 link: https://www.elastic.co/docs/contribute-docs/style-guide/word-choice
 ignorecase: true
 level: warning

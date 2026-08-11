@@ -1,5 +1,5 @@
 extends: existence
-message: "Use semicolons judiciously."
+message: "Use semicolons sparingly. Consider splitting the sentence or using a comma or conjunction."
 link: https://www.elastic.co/docs/contribute-docs/style-guide/grammar-spelling#semicolons
 nonword: true
 scope: sentence

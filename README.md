@@ -189,7 +189,7 @@ cd /path/to/elastic-style-guide
 echo "This uses eg, instead of for example." > test.md
 
 # Run Vale using the local configuration
-vale --config=.vale.ini test.md
+vale --config=.vale.ini --no-global test.md
 ```
 
 Vale immediately uses the rules from the local `styles/Elastic/` directory. Any changes you make to rule files are reflected instantly without needing to create a release.
@@ -206,12 +206,22 @@ vim styles/Elastic/Latinisms.yml
 2. Run Vale against a test file:
 
 ```bash
-vale --config=.vale.ini your-test-file.md
+vale --config=.vale.ini --no-global your-test-file.md
 ```
 
 3. Iterate on your changes until the rule works as expected.
 
 The local `.vale.ini` configuration uses `StylesPath = styles`, which points directly to the local directory, so there's no need for releases or package syncing during development.
+
+### Rule authoring guidance
+
+Use rule messages to explain the issue and the next action. Prefer messages that name the matched term with `%s`, suggest a replacement when one is available, and explain context for rules that require judgment.
+
+Use severity levels consistently:
+
+- Use `error` only for content that is structurally broken or unsafe to ship, such as conflict markers.
+- Use `warning` for high-confidence issues with a clear fix, such as spelling, accessibility terms, or blocked word choices.
+- Use `suggestion` for style guidance, tone guidance, or context-dependent advice.
 
 ## Creating releases
 
