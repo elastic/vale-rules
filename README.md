@@ -221,7 +221,7 @@ Run the focused regression tests before changing rule matching behavior:
 python3 rule-tests/run_rule_tests.py
 ```
 
-These tests assert exact matches for rules with known false-positive risks.
+These tests assert representative matches for every rule in `styles/Elastic/` and fail when a rule does not have a regression assertion.
 
 ### Rule authoring guidance
 
