@@ -1,10 +1,8 @@
 extends: existence
-message: "Use caution when using first-person pronouns such as '%s.'"
+message: "Use caution when using first-person pronouns (me, my, mine)."
 link: https://www.elastic.co/docs/contribute-docs/style-guide/grammar-spelling#use-singular-first-person-pronouns-sparingly-i-me-my-mine
 ignorecase: true
 level: suggestion
 nonword: true
-tokens:
-  - \bme\b
-  - \bmy\b
-  - \bmine\b
+raw:
+  - '(?<![a-zA-Z0-9_-])(me|my|mine)(?![a-zA-Z0-9_-])'
