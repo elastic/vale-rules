@@ -1,5 +1,5 @@
 extends: existence
-message: "Use caution when using first-person pronouns (I, me, my, mine)."
+message: "Use caution when using first-person pronouns (me, my, mine)."
 link: https://www.elastic.co/docs/contribute-docs/style-guide/grammar-spelling#use-singular-first-person-pronouns-sparingly-i-me-my-mine
 ignorecase: true
 level: suggestion
