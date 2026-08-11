@@ -5,4 +5,4 @@ ignorecase: true
 level: suggestion
 nonword: true
 raw:
-  - '(?:^|[^a-zA-Z0-9-])(me|my|mine)(?:[^a-zA-Z0-9-]|$)'
+  - '(?<![a-zA-Z0-9_-])(me|my|mine)(?![a-zA-Z0-9_-])'
