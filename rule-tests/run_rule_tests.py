@@ -152,9 +152,9 @@ def spelling_config(tmp_dir: Path) -> Path:
 def main() -> int:
     asserted_rules: set[str] = set()
 
-    all_rule_alerts = run_vale(DEFAULT_CONFIG, REPO_ROOT / "test-all-rules.md")
+    all_rule_alerts = run_vale(DEFAULT_CONFIG, FIXTURES / "all-rules.md")
     for rule, expected in ALL_RULES_EXPECTED.items():
-        assert_rule_contains("test-all-rules.md", all_rule_alerts, rule, expected)
+        assert_rule_contains("all-rules.md", all_rule_alerts, rule, expected)
         asserted_rules.add(rule)
 
     missing_rule_alerts = run_vale(DEFAULT_CONFIG, FIXTURES / "missing-rules.md")
