@@ -12,6 +12,40 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = REPO_ROOT / "rule-tests" / "fixtures"
+DEFAULT_CONFIG = REPO_ROOT / ".vale.ini"
+
+ALL_RULES_EXPECTED = {
+    "Elastic.Accessibility": [(12, "a victim of")],
+    "Elastic.Articles": [(16, "a FAQ")],
+    "Elastic.BritishSpellings": [(20, "optimise")],
+    "Elastic.Clone": [(22, "Clone")],
+    "Elastic.ConflictMarkers": [(28, "<<<<<<< HEAD")],
+    "Elastic.DeviceAgnosticism": [(36, "tap")],
+    "Elastic.Dimensions": [(40, "1920 x 1080")],
+    "Elastic.DirectionalLanguage": [(44, "shown below")],
+    "Elastic.DontUse": [(36, "Please")],
+    "Elastic.Ellipses": [(48, "...")],
+    "Elastic.EndPuntuaction": [(56, ".")],
+    "Elastic.Exclamation": [(60, "amazing!")],
+    "Elastic.Gender": [(64, "s/he")],
+    "Elastic.GenderBias": [(68, "fireman")],
+    "Elastic.HeadingColons": [(72, ": w")],
+    "Elastic.KibanaChromeTerms": [(76, "side nav")],
+    "Elastic.Latinisms": [(48, "etc")],
+    "Elastic.MappedPages": [(2, "mapped_pages:")],
+    "Elastic.MeaningfulCTAs": [(84, "click here")],
+    "Elastic.MenuArrows": [(88, "Find > Root")],
+    "Elastic.MenuArrowsBold": [(92, "Select **Stack Management** > **Index Management**.")],
+    "Elastic.Negations": [(96, "cannot proceed without")],
+    "Elastic.OxfordComma": [(100, "indexing, searching and analytics.")],
+    "Elastic.PluralAbbreviations": [(104, "API's are")],
+    "Elastic.QuotesPunctuation": [(108, '"do not modify the file",')],
+    "Elastic.Repetition": [(112, "test test")],
+    "Elastic.Semicolons": [(116, ";")],
+    "Elastic.Versions": [(120, "and higher")],
+    "Elastic.WordChoice": [(124, "Simply")],
+    "Elastic.Wordiness": [(128, "In order to")],
+}
 
 
 def run_vale(config: Path, fixture: Path) -> list[dict]:
@@ -57,6 +91,41 @@ def assert_rule_matches(
     print(f"ok {name}")
 
 
+def assert_rule_contains(
+    name: str,
+    alerts: list[dict],
+    rule: str,
+    expected: list[tuple[int, str]],
+) -> None:
+    actual = [(alert["Line"], alert["Match"]) for alert in alerts if alert["Check"] == rule]
+    missing = [match for match in expected if match not in actual]
+
+    if missing:
+        raise AssertionError(
+            f"{name} expected {rule} to include {missing}, but got {actual}."
+        )
+
+    print(f"ok {name} {rule}")
+
+
+def assert_all_rules_have_assertions(asserted_rules: set[str]) -> None:
+    rule_files = sorted((REPO_ROOT / "styles" / "Elastic").glob("*.yml"))
+    available_rules = {f"Elastic.{path.stem}" for path in rule_files}
+
+    missing_assertions = sorted(available_rules - asserted_rules)
+    stale_assertions = sorted(asserted_rules - available_rules)
+
+    if missing_assertions or stale_assertions:
+        problems = []
+        if missing_assertions:
+            problems.append(f"missing assertions for {missing_assertions}")
+        if stale_assertions:
+            problems.append(f"stale assertions for {stale_assertions}")
+        raise AssertionError("; ".join(problems))
+
+    print(f"ok all {len(available_rules)} rules have assertions")
+
+
 def spelling_config(tmp_dir: Path) -> Path:
     config = tmp_dir / "spelling.vale.ini"
     config.write_text(
@@ -78,7 +147,14 @@ def spelling_config(tmp_dir: Path) -> Path:
 
 
 def main() -> int:
-    first_person_alerts = run_vale(REPO_ROOT / ".vale.ini", FIXTURES / "first-person.md")
+    asserted_rules: set[str] = set()
+
+    all_rule_alerts = run_vale(DEFAULT_CONFIG, FIXTURES / "all-rules.md")
+    for rule, expected in ALL_RULES_EXPECTED.items():
+        assert_rule_contains("all-rules.md", all_rule_alerts, rule, expected)
+        asserted_rules.add(rule)
+
+    first_person_alerts = run_vale(DEFAULT_CONFIG, FIXTURES / "first-person.md")
     assert_rule_matches(
         "first-person boundaries",
         first_person_alerts,
@@ -92,6 +168,7 @@ def main() -> int:
             (7, "mine"),
         ],
     )
+    asserted_rules.add("Elastic.FirstPerson")
 
     with tempfile.TemporaryDirectory() as tmp:
         spelling_alerts = run_vale(
@@ -105,6 +182,9 @@ def main() -> int:
         "Elastic.Spelling",
         [(4, "Gatewaty")],
     )
+    asserted_rules.add("Elastic.Spelling")
+
+    assert_all_rules_have_assertions(asserted_rules)
 
     return 0
 
