@@ -5,4 +5,6 @@ ignorecase: true
 level: suggestion
 nonword: true
 raw:
+  # Treat hyphens and underscores as identifier characters so cloud region IDs
+  # and slugs like me-central2, my-app, and my_app are not flagged.
   - '(?<![a-zA-Z0-9_-])(me|my|mine)(?![a-zA-Z0-9_-])'

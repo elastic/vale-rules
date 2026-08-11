@@ -10,5 +10,6 @@ action:
     - '\s*(?:=>|>)\s*'
     - ' → '
 tokens:
+  # Match bare => everywhere, but require words around > so comparisons and markup are less noisy.
   - "=>"
   - '[A-Za-z]{3,}\s>\s[A-Za-z]{3,}'

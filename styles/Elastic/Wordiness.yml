@@ -18,6 +18,7 @@ swap:
   a myriad of: myriad
   adversely impact: hurt
   all across: across
+  # Preserve the idioms that have separate, more specific replacements below.
   all of (?!a sudden|these): all
   all of a sudden: suddenly
   all of these: these
@@ -80,6 +81,7 @@ swap:
   in a careful manner: carefully
   in a thoughtful manner: thoughtfully
   in a timely manner: timely
+  # Flag "in addition" on its own, but leave "in addition to" for context-specific editing.
   in addition(?!\s+to\b): also
   in an effort to: to
   in between: between
