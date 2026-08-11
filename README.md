@@ -213,6 +213,16 @@ vale --config=.vale.ini --no-global your-test-file.md
 
 The local `.vale.ini` configuration uses `StylesPath = styles`, which points directly to the local directory, so there's no need for releases or package syncing during development.
 
+### Running regression tests
+
+Run the focused regression tests before changing rule matching behavior:
+
+```bash
+python3 rule-tests/run_rule_tests.py
+```
+
+These tests assert exact matches for rules with known false-positive risks.
+
 ### Rule authoring guidance
 
 Use rule messages to explain the issue and the next action. Prefer messages that name the matched term with `%s`, suggest a replacement when one is available, and explain context for rules that require judgment.
