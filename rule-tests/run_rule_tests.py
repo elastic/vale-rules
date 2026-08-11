@@ -15,39 +15,36 @@ FIXTURES = REPO_ROOT / "rule-tests" / "fixtures"
 DEFAULT_CONFIG = REPO_ROOT / ".vale.ini"
 
 ALL_RULES_EXPECTED = {
-    "Elastic.Accessibility": [(43, "a victim of")],
-    "Elastic.Articles": [(51, "a FAQ")],
-    "Elastic.BritishSpellings": [(55, "optimise")],
-    "Elastic.Clone": [(99, "Clone")],
-    "Elastic.ConflictMarkers": [(157, "<<<<<<< HEAD")],
-    "Elastic.DeviceAgnosticism": [(59, "tap")],
-    "Elastic.Dimensions": [(63, "1920 x 1080")],
-    "Elastic.DontUse": [(59, "Please")],
-    "Elastic.Ellipses": [(67, "...")],
-    "Elastic.EndPuntuaction": [(24, "!")],
-    "Elastic.Exclamation": [(24, "Punctuation!")],
-    "Elastic.Gender": [(103, "s/he")],
-    "Elastic.GenderBias": [(107, "fireman")],
-    "Elastic.HeadingColons": [(30, ": w")],
-    "Elastic.Latinisms": [(67, "etc")],
+    "Elastic.Accessibility": [(12, "a victim of")],
+    "Elastic.Articles": [(16, "a FAQ")],
+    "Elastic.BritishSpellings": [(20, "optimise")],
+    "Elastic.Clone": [(22, "Clone")],
+    "Elastic.ConflictMarkers": [(28, "<<<<<<< HEAD")],
+    "Elastic.DeviceAgnosticism": [(36, "tap")],
+    "Elastic.Dimensions": [(40, "1920 x 1080")],
+    "Elastic.DirectionalLanguage": [(44, "shown below")],
+    "Elastic.DontUse": [(36, "Please")],
+    "Elastic.Ellipses": [(48, "...")],
+    "Elastic.EndPuntuaction": [(56, ".")],
+    "Elastic.Exclamation": [(60, "amazing!")],
+    "Elastic.Gender": [(64, "s/he")],
+    "Elastic.GenderBias": [(68, "fireman")],
+    "Elastic.HeadingColons": [(72, ": w")],
+    "Elastic.KibanaChromeTerms": [(76, "side nav")],
+    "Elastic.Latinisms": [(48, "etc")],
     "Elastic.MappedPages": [(2, "mapped_pages:")],
-    "Elastic.MeaningfulCTAs": [(117, "click here")],
-    "Elastic.MenuArrows": [(167, "Find > Root")],
-    "Elastic.Negations": [(121, "cannot proceed without")],
-    "Elastic.OxfordComma": [(125, "indexing, searching and analytics.")],
-    "Elastic.PluralAbbreviations": [(129, "API's are")],
-    "Elastic.Repetition": [(137, "test test")],
-    "Elastic.Semicolons": [(20, ";")],
-    "Elastic.Versions": [(145, "and higher")],
-    "Elastic.WordChoice": [(87, "whitelist")],
-    "Elastic.Wordiness": [(153, "In order to")],
-}
-
-MISSING_RULES_EXPECTED = {
-    "Elastic.DirectionalLanguage": [(3, "shown below")],
-    "Elastic.KibanaChromeTerms": [(7, "side nav")],
-    "Elastic.MenuArrowsBold": [(11, "Select **Stack Management** > **Index Management**.")],
-    "Elastic.QuotesPunctuation": [(15, '"do not modify the file",')],
+    "Elastic.MeaningfulCTAs": [(84, "click here")],
+    "Elastic.MenuArrows": [(88, "Find > Root")],
+    "Elastic.MenuArrowsBold": [(92, "Select **Stack Management** > **Index Management**.")],
+    "Elastic.Negations": [(96, "cannot proceed without")],
+    "Elastic.OxfordComma": [(100, "indexing, searching and analytics.")],
+    "Elastic.PluralAbbreviations": [(104, "API's are")],
+    "Elastic.QuotesPunctuation": [(108, '"do not modify the file",')],
+    "Elastic.Repetition": [(112, "test test")],
+    "Elastic.Semicolons": [(116, ";")],
+    "Elastic.Versions": [(120, "and higher")],
+    "Elastic.WordChoice": [(124, "Simply")],
+    "Elastic.Wordiness": [(128, "In order to")],
 }
 
 
@@ -155,11 +152,6 @@ def main() -> int:
     all_rule_alerts = run_vale(DEFAULT_CONFIG, FIXTURES / "all-rules.md")
     for rule, expected in ALL_RULES_EXPECTED.items():
         assert_rule_contains("all-rules.md", all_rule_alerts, rule, expected)
-        asserted_rules.add(rule)
-
-    missing_rule_alerts = run_vale(DEFAULT_CONFIG, FIXTURES / "missing-rules.md")
-    for rule, expected in MISSING_RULES_EXPECTED.items():
-        assert_rule_contains("missing-rules.md", missing_rule_alerts, rule, expected)
         asserted_rules.add(rule)
 
     first_person_alerts = run_vale(DEFAULT_CONFIG, FIXTURES / "first-person.md")
