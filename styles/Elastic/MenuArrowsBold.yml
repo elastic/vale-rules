@@ -11,5 +11,7 @@ action:
     - '\s*(?:=>|>)\s*'
     - ' → '
 tokens:
+  # Match bold menu paths on one Markdown line while avoiding code spans and indented code.
   - '^[ \t]{0,3}[^ \t`\n][^`\n]*\*\*[^*`\n]{2,}\s(?:>|=>)\s[^*`\n]{2,}\*\*[^`\n]*$'
+  # Match the common **Menu** > **Item** form without reaching across lines.
   - '^[ \t]{0,3}[^ \t`\n][^`\n]*\*\*[A-Za-z]{2,}(?:\s[A-Za-z]{2,})*\*\*\s(?:>|=>)\s\*\*[A-Za-z]{2,}(?:\s[A-Za-z]{2,})*\*\*[^`\n]*$'

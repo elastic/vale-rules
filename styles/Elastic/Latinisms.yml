@@ -12,4 +12,5 @@ swap:
   '\bad hoc\b': if needed
   '\bvice versa\b': and the reverse
   '\bvs\b': versus
+  # Allow URL paths like /etc while still flagging etc in prose.
   '(?<!/)\betc\b': and so on
