@@ -107,6 +107,7 @@ Kibana Query Language
 Lens
 Logstash
 Metricbeat
+Osquerybeat
 Packetbeat
 Painless
 Painless Lab
