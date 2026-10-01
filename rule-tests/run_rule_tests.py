@@ -75,13 +75,18 @@ def run_vale(config: Path, fixture: Path) -> list[dict]:
     return output.get(str(fixture), [])
 
 
+def rule_matches(alerts: list[dict], rule: str) -> list[tuple[int, str]]:
+    # Vale 3.18+ includes trailing whitespace consumed by a token in the reported match.
+    return [(alert["Line"], alert["Match"].strip()) for alert in alerts if alert["Check"] == rule]
+
+
 def assert_rule_matches(
     name: str,
     alerts: list[dict],
     rule: str,
     expected: list[tuple[int, str]],
 ) -> None:
-    actual = [(alert["Line"], alert["Match"]) for alert in alerts if alert["Check"] == rule]
+    actual = rule_matches(alerts, rule)
 
     if actual != expected:
         raise AssertionError(
@@ -97,7 +102,7 @@ def assert_rule_contains(
     rule: str,
     expected: list[tuple[int, str]],
 ) -> None:
-    actual = [(alert["Line"], alert["Match"]) for alert in alerts if alert["Check"] == rule]
+    actual = rule_matches(alerts, rule)
     missing = [match for match in expected if match not in actual]
 
     if missing:
@@ -169,6 +174,20 @@ def main() -> int:
         ],
     )
     asserted_rules.add("Elastic.FirstPerson")
+
+    code_block_alerts = run_vale(DEFAULT_CONFIG, FIXTURES / "code-blocks.md")
+    assert_rule_matches(
+        "code blocks and metadata stay unlinted",
+        code_block_alerts,
+        "Elastic.QuotesPunctuation",
+        [(3, '"do not modify the file",')],
+    )
+    assert_rule_matches(
+        "inline code is masked, not dropped",
+        code_block_alerts,
+        "Elastic.Repetition",
+        [],
+    )
 
     with tempfile.TemporaryDirectory() as tmp:
         spelling_alerts = run_vale(
