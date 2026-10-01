@@ -21,3 +21,12 @@ Set `"type": "event_callback",` in the request body.
 
 Set to `0` to skip the recovering phase.
 ::::
+
+A fence whose first line is a bracket token must stay a fence:
+
+```ini
+[section]
+key = "quoted value",
+```
+
+The docs say "keep linting after the fence", then continue.

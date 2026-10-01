@@ -180,7 +180,10 @@ def main() -> int:
         "code blocks and metadata stay unlinted",
         code_block_alerts,
         "Elastic.QuotesPunctuation",
-        [(3, '"do not modify the file",')],
+        [
+            (3, '"do not modify the file",'),
+            (32, '"keep linting after the fence",'),
+        ],
     )
     assert_rule_matches(
         "inline code is masked, not dropped",
