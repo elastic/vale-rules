@@ -19,7 +19,7 @@ jobs:
 
       - name: Install Vale
         env:
-          VALE_VERSION: 3.23.0
+          VALE_VERSION: 3.24.0
         run: |
           curl -fsSL "https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz" -o vale.tar.gz
           tar -xzf vale.tar.gz vale
