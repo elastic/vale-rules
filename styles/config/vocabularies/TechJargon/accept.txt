@@ -457,6 +457,8 @@
 # Batch 4 additions
 (?i)acks
 (?i)agentic
+(?i)subagent
+(?i)subagents
 (?i)allowlisting
 (?i)antimalware
 (?i)arg
