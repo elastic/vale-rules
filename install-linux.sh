@@ -102,7 +102,7 @@ XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 VALE_DATA_DIR="$XDG_DATA_HOME/vale"
 VALE_CONFIG_DIR="$XDG_CONFIG_HOME/vale"
 VALE_CONFIG_FILE="$VALE_CONFIG_DIR/.vale.ini"
-VALE_STYLES_DIR="$XDG_DATA_HOME/vale/styles"
+VALE_STYLES_DIR="$VALE_CONFIG_DIR/styles"
 
 # 5. Check existing Vale installation
 if [ -d "$VALE_CONFIG_DIR" ] || [ -d "$VALE_DATA_DIR" ]; then
